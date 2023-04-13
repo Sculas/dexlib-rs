@@ -1,0 +1,3 @@
+- [ ] Unit tests for all data types to ensure they are 1:1 with the spec
+- [ ] Implement low level data types
+- [ ] Implement high level API around data types
