@@ -1,5 +1,6 @@
-use crate::types::*;
+use crate::raw::*;
 use adler32::adler32;
+use derivative::Derivative;
 use scroll::{
     ctx::{TryFromCtx, TryIntoCtx},
     Pread, Pwrite,
@@ -23,10 +24,12 @@ pub enum HeaderError {
     IoError(#[from] std::io::Error),
 }
 
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Header<'a> {
     pub version: Version,
     pub checksum: uint,
+    #[derivative(Debug = "ignore")]
     pub signature: &'a [ubyte],
     pub file_size: uint,
     pub header_size: uint,
@@ -53,44 +56,41 @@ pub struct Header<'a> {
 impl<'a> TryFromCtx<'a, scroll::Endian> for Header<'a> {
     type Error = HeaderError;
     fn try_from_ctx(src: &'a [u8], ctx: scroll::Endian) -> Result<(Self, usize), Self::Error> {
-        let mut offset = 0;
+        let offset = &mut 0;
 
-        let version = src
-            .gread_with::<&[ubyte]>(&mut offset, MAGIC_LEN)?
-            .try_into()?;
-
-        let checksum = src.gread_with(&mut offset, ctx)?;
-        if checksum != adler32(&src[offset..])? {
+        let version = src.gread_with::<&[ubyte]>(offset, MAGIC_LEN)?.try_into()?;
+        let checksum = src.gread_with(offset, ctx)?;
+        if checksum != adler32(&src[*offset..])? {
             return Err(HeaderError::InvalidChecksum);
         }
 
-        let signature = src.gread_with::<&[ubyte]>(&mut offset, SIG_LEN)?;
-        let file_size = src.gread_with(&mut offset, ctx)?;
-        let header_size = src.gread_with(&mut offset, ctx)?;
+        let signature = src.gread_with::<&[ubyte]>(offset, SIG_LEN)?;
+        let file_size = src.gread_with(offset, ctx)?;
+        let header_size = src.gread_with(offset, ctx)?;
 
-        let endian_tag = src.gread_with(&mut offset, ctx)?;
+        let endian_tag = src.gread_with(offset, ctx)?;
         match endian_tag {
             ENDIAN_CONSTANT => {}                                 // LE, ok
             _ => Err(HeaderError::InvalidEndianTag(endian_tag))?, // BE or unknown, not ok
         }
 
-        let link_size = src.gread_with(&mut offset, ctx)?;
-        let link_off = src.gread_with(&mut offset, ctx)?;
-        let map_off = src.gread_with(&mut offset, ctx)?;
-        let string_ids_size = src.gread_with(&mut offset, ctx)?;
-        let string_ids_off = src.gread_with(&mut offset, ctx)?;
-        let type_ids_size = src.gread_with(&mut offset, ctx)?;
-        let type_ids_off = src.gread_with(&mut offset, ctx)?;
-        let proto_ids_size = src.gread_with(&mut offset, ctx)?;
-        let proto_ids_off = src.gread_with(&mut offset, ctx)?;
-        let field_ids_size = src.gread_with(&mut offset, ctx)?;
-        let field_ids_off = src.gread_with(&mut offset, ctx)?;
-        let method_ids_size = src.gread_with(&mut offset, ctx)?;
-        let method_ids_off = src.gread_with(&mut offset, ctx)?;
-        let class_defs_size = src.gread_with(&mut offset, ctx)?;
-        let class_defs_off = src.gread_with(&mut offset, ctx)?;
-        let data_size = src.gread_with(&mut offset, ctx)?;
-        let data_off = src.gread_with(&mut offset, ctx)?;
+        let link_size = src.gread_with(offset, ctx)?;
+        let link_off = src.gread_with(offset, ctx)?;
+        let map_off = src.gread_with(offset, ctx)?;
+        let string_ids_size = src.gread_with(offset, ctx)?;
+        let string_ids_off = src.gread_with(offset, ctx)?;
+        let type_ids_size = src.gread_with(offset, ctx)?;
+        let type_ids_off = src.gread_with(offset, ctx)?;
+        let proto_ids_size = src.gread_with(offset, ctx)?;
+        let proto_ids_off = src.gread_with(offset, ctx)?;
+        let field_ids_size = src.gread_with(offset, ctx)?;
+        let field_ids_off = src.gread_with(offset, ctx)?;
+        let method_ids_size = src.gread_with(offset, ctx)?;
+        let method_ids_off = src.gread_with(offset, ctx)?;
+        let class_defs_size = src.gread_with(offset, ctx)?;
+        let class_defs_off = src.gread_with(offset, ctx)?;
+        let data_size = src.gread_with(offset, ctx)?;
+        let data_off = src.gread_with(offset, ctx)?;
 
         Ok((
             Header {
@@ -118,7 +118,7 @@ impl<'a> TryFromCtx<'a, scroll::Endian> for Header<'a> {
                 data_size,
                 data_off,
             },
-            offset,
+            *offset,
         ))
     }
 }
@@ -126,31 +126,31 @@ impl<'a> TryFromCtx<'a, scroll::Endian> for Header<'a> {
 impl<'a> TryIntoCtx<scroll::Endian> for Header<'a> {
     type Error = HeaderError;
     fn try_into_ctx(self, dst: &mut [u8], ctx: scroll::Endian) -> Result<usize, Self::Error> {
-        let mut offset = 0;
-        dst.gwrite_with(self.version, &mut offset, ctx)?;
-        dst.gwrite_with(self.checksum, &mut offset, ctx)?;
-        dst.gwrite_with(self.signature, &mut offset, ())?;
-        dst.gwrite_with(self.file_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.header_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.endian_tag, &mut offset, ctx)?;
-        dst.gwrite_with(self.link_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.link_off, &mut offset, ctx)?;
-        dst.gwrite_with(self.map_off, &mut offset, ctx)?;
-        dst.gwrite_with(self.string_ids_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.string_ids_off, &mut offset, ctx)?;
-        dst.gwrite_with(self.type_ids_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.type_ids_off, &mut offset, ctx)?;
-        dst.gwrite_with(self.proto_ids_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.proto_ids_off, &mut offset, ctx)?;
-        dst.gwrite_with(self.field_ids_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.field_ids_off, &mut offset, ctx)?;
-        dst.gwrite_with(self.method_ids_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.method_ids_off, &mut offset, ctx)?;
-        dst.gwrite_with(self.class_defs_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.class_defs_off, &mut offset, ctx)?;
-        dst.gwrite_with(self.data_size, &mut offset, ctx)?;
-        dst.gwrite_with(self.data_off, &mut offset, ctx)?;
-        Ok(offset)
+        let offset = &mut 0;
+        dst.gwrite_with(self.version, offset, ctx)?;
+        dst.gwrite_with(self.checksum, offset, ctx)?;
+        dst.gwrite_with(self.signature, offset, ())?;
+        dst.gwrite_with(self.file_size, offset, ctx)?;
+        dst.gwrite_with(self.header_size, offset, ctx)?;
+        dst.gwrite_with(self.endian_tag, offset, ctx)?;
+        dst.gwrite_with(self.link_size, offset, ctx)?;
+        dst.gwrite_with(self.link_off, offset, ctx)?;
+        dst.gwrite_with(self.map_off, offset, ctx)?;
+        dst.gwrite_with(self.string_ids_size, offset, ctx)?;
+        dst.gwrite_with(self.string_ids_off, offset, ctx)?;
+        dst.gwrite_with(self.type_ids_size, offset, ctx)?;
+        dst.gwrite_with(self.type_ids_off, offset, ctx)?;
+        dst.gwrite_with(self.proto_ids_size, offset, ctx)?;
+        dst.gwrite_with(self.proto_ids_off, offset, ctx)?;
+        dst.gwrite_with(self.field_ids_size, offset, ctx)?;
+        dst.gwrite_with(self.field_ids_off, offset, ctx)?;
+        dst.gwrite_with(self.method_ids_size, offset, ctx)?;
+        dst.gwrite_with(self.method_ids_off, offset, ctx)?;
+        dst.gwrite_with(self.class_defs_size, offset, ctx)?;
+        dst.gwrite_with(self.class_defs_off, offset, ctx)?;
+        dst.gwrite_with(self.data_size, offset, ctx)?;
+        dst.gwrite_with(self.data_off, offset, ctx)?;
+        Ok(*offset)
     }
 }
 
@@ -212,12 +212,12 @@ impl TryFrom<&[ubyte]> for Version {
 impl TryIntoCtx<scroll::Endian> for Version {
     type Error = scroll::Error;
     fn try_into_ctx(self, dst: &mut [u8], ctx: scroll::Endian) -> Result<usize, Self::Error> {
-        let mut offset = 0;
-        dst.gwrite_with(MAGIC_START.as_slice(), &mut offset, ())?;
-        dst.gwrite_with(self.0, &mut offset, ctx)?;
-        dst.gwrite_with(self.1, &mut offset, ctx)?;
-        dst.gwrite_with(self.2, &mut offset, ctx)?;
-        dst.gwrite_with(MAGIC_END, &mut offset, ctx)?;
-        Ok(offset)
+        let offset = &mut 0;
+        dst.gwrite_with(MAGIC_START.as_slice(), offset, ())?;
+        dst.gwrite_with(self.0, offset, ctx)?;
+        dst.gwrite_with(self.1, offset, ctx)?;
+        dst.gwrite_with(self.2, offset, ctx)?;
+        dst.gwrite_with(MAGIC_END, offset, ctx)?;
+        Ok(*offset)
     }
 }
