@@ -2,6 +2,8 @@
 
 pub mod header;
 pub mod map_list;
+/// Simple, small types that don't need their own module.
+pub mod simple;
 pub mod string;
 
 pub(crate) type byte = i8;
