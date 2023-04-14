@@ -27,29 +27,91 @@ pub enum HeaderError {
 #[derive(Derivative, Default)]
 #[derivative(Debug)]
 pub struct Header<'a> {
+    /// The version of the dex file.
+    /// [`Version`] is syntactic sugar for the `magic` value which would normally be here.
+    /// Any future reference to `magic` refers to this field.
     pub version: Version,
+    /// Adler32 checksum of the rest of the file (everything but `magic` and this field).
     pub checksum: uint,
+    /// SHA-1 signature (hash) of the rest of the file (everything but `magic`, `checksum`, and this field).
     #[derivative(Debug = "ignore")]
     pub signature: &'a [ubyte],
+    /// Size of the entire file (including the header), in bytes.
     pub file_size: uint,
+    /// Size of the header (this entire section), in bytes.
     pub header_size: uint,
+    /// Specifies the endianness of the dex file.
+    /// Currently, only little-endian is supported.
+    /// Click [here](endian-constant) for more information.
+    ///
+    /// [endian-constant]: https://source.android.com/devices/tech/dalvik/dex-format#endian-constant
     pub endian_tag: uint,
+    /// Size of the link section, or 0 if this file isn't statically linked.
     pub link_size: uint,
+    /// Offset from the start of the file to the link section, or 0 if `link_size == 0`.
+    /// The offset, if non-zero, should be to an offset into the `link_data` section.
+    /// The format of the data pointed at is left unspecified by this document;
+    /// this header field (and the previous) are left as hooks for use by runtime implementations.
     pub link_off: uint,
+    /// Offset from the start of the file to the map item.
+    /// The offset, which must be non-zero, should be to an offset into the `data` section,
+    /// and the data should be in the format specified by "map_list" below.
+    ///
+    /// Implemented as [`MapList`][super::map_list::MapList].
     pub map_off: uint,
+    /// Count of strings in the string identifiers list.
+    ///
+    /// Implemented in the [`string`][super::string] module.
     pub string_ids_size: uint,
+    /// Offset from the start of the file to the string identifiers list,
+    /// or 0 if `string_ids_size == 0` (admittedly a strange edge case).
+    /// The offset, if non-zero, should be to the start of the `string_ids` section.
+    ///
+    /// Implemented in the [`string`][super::string] module.
     pub string_ids_off: uint,
+    /// Count of elements in the type identifiers list, at most 65535.
     pub type_ids_size: uint,
+    /// Offset from the start of the file to the type identifiers list,
+    /// or 0 if `type_ids_size == 0` (admittedly a strange edge case).
+    /// The offset, if non-zero, should be to the start of the `type_ids` section.
+    ///
+    /// Implemented as [`TypeId`][super::simple::TypeId].
     pub type_ids_off: uint,
+    /// Count of elements in the prototype identifiers list, at most 65535.
     pub proto_ids_size: uint,
+    /// Offset from the start of the file to the prototype identifiers list,
+    /// or 0 if `proto_ids_size == 0` (admittedly a strange edge case).
+    /// The offset, if non-zero, should be to the start of the `proto_ids` section.
+    ///
+    /// Implemented as [`ProtoId`][super::simple::ProtoId].
     pub proto_ids_off: uint,
+    /// Count of elements in the field identifiers list.
     pub field_ids_size: uint,
+    /// Offset from the start of the file to the field identifiers list,
+    /// or 0 if `field_ids_size == 0`.
+    /// The offset, if non-zero, should be to the start of the `field_ids` section.
+    ///
+    /// Implemented as [`FieldId`][super::simple::FieldId].
     pub field_ids_off: uint,
+    /// Count of elements in the method identifiers list (undocumented: at most 65535, requires multidex).
     pub method_ids_size: uint,
+    /// Offset from the start of the file to the method identifiers list,
+    /// or 0 if `method_ids_size == 0`.
+    /// The offset, if non-zero, should be to the start of the `method_ids` section.
+    ///
+    /// Implemented as [`MethodId`][super::simple::MethodId].
     pub method_ids_off: uint,
+    /// Count of elements in the class definitions list.
     pub class_defs_size: uint,
+    /// Offset from the start of the file to the class definitions list,
+    /// or 0 if `class_defs_size == 0` (admittedly a strange edge case).
+    /// The offset, if non-zero, should be to the start of the `class_defs` section.
+    ///
+    /// TODO: Implement this.
     pub class_defs_off: uint,
+    /// Size of `data` section in bytes. Must be an even multiple of [`sizeof(uint)`][std::mem::size_of].
     pub data_size: uint,
+    /// Offset from the start of the file to the start of the `data` section.
     pub data_off: uint,
 }
 
