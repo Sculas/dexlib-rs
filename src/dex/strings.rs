@@ -108,3 +108,16 @@ impl<'a> StringCache<'a> {
         self.added_strings.push(to_java_cesu8(&string).into_owned());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    pub fn test() {
+        let dex = crate::t::dex!();
+        let sidx = dex.strings().len() / 2;
+        let sid_1 = dex.strings().id_at(sidx).unwrap();
+        let str = dex.strings().get(&sid_1).unwrap();
+        let sid_2 = dex.strings().find(&str).unwrap();
+        assert_eq!(sid_1, sid_2);
+    }
+}
