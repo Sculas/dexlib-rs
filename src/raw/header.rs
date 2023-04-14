@@ -42,9 +42,9 @@ pub struct Header<'a> {
     pub header_size: uint,
     /// Specifies the endianness of the dex file.
     /// Currently, only little-endian is supported.
-    /// Click [here](endian-constant) for more information.
+    /// Click [here][endian-constant] for more information.
     ///
-    /// [endian-constant]: https://source.android.com/devices/tech/dalvik/dex-format#endian-constant
+    /// [endian-constant]: https://source.android.com/docs/core/runtime/dex-format#endian-constant
     pub endian_tag: uint,
     /// Size of the link section, or 0 if this file isn't statically linked.
     pub link_size: uint,

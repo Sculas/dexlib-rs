@@ -54,9 +54,9 @@ pub struct StringData<'a> {
     /// The encoded length is implied by the position of the 0 byte.
     pub size: u64,
     /// A series of MUTF-8 code units (a.k.a. octets, a.k.a. bytes) followed by a byte of value 0.
-    /// See ["MUTF-8 (Modified UTF-8) Encoding"](encoding) for details and discussion about the data format.
+    /// See ["MUTF-8 (Modified UTF-8) Encoding"][1] for details and discussion about the data format.
     ///
-    /// [encoding]: https://source.android.com/docs/core/runtime/dex-format#mutf-8
+    /// [1]: https://source.android.com/docs/core/runtime/dex-format#mutf-8
     #[derivative(Debug = "ignore")]
     pub data: &'a [ubyte],
 }
