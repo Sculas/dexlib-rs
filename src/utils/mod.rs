@@ -28,6 +28,13 @@ macro_rules! count_delim {
     };
 }
 
+#[cfg(debug_assertions)]
+macro_rules! assert_sz {
+    ($($const:ident; $struct:ty)+) => {
+        $(const _: [(); /* SIZE VALIDATION FAILED! */ $const - std::mem::size_of::<$struct>()] = [];)+
+    };
+}
+
 pub trait IntoArc<T> {
     fn into_arc(self) -> std::sync::Arc<T>;
 }

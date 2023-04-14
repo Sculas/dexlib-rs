@@ -1,4 +1,4 @@
-use crate::{raw::*, utils::leb128::Uleb128};
+use crate::raw::*;
 use derivative::Derivative;
 use scroll::{
     ctx::{TryFromCtx, TryIntoCtx},
@@ -67,7 +67,7 @@ impl<'a> TryFromCtx<'a, scroll::Endian> for StringData<'a> {
         let offset = &mut 0;
         // this is the decoded/actual length of the string
         // NOT the encoded length!
-        let size = Uleb128::read(src, offset)?;
+        let size = uleb128::read(src, offset)?;
         // for that, we read until we find a 0 byte
         let encoded_len = count_delim!(src, offset, b'\0');
         let data = src.gread_with::<&[ubyte]>(offset, encoded_len)?;
@@ -79,7 +79,7 @@ impl<'a> TryIntoCtx<scroll::Endian> for StringData<'a> {
     type Error = StringError;
     fn try_into_ctx(self, dst: &mut [u8], _ctx: scroll::Endian) -> Result<usize, Self::Error> {
         let offset = &mut 0;
-        Uleb128::write(dst, offset, self.size)?;
+        uleb128::write(dst, offset, self.size)?;
         dst.gwrite(self.data, offset)?;
         Ok(*offset)
     }
