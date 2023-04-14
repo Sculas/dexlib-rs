@@ -1,5 +1,7 @@
 #![allow(non_camel_case_types, dead_code)] // TODO: remove dead_code
 
+pub mod classdef;
+pub mod flags;
 pub mod header;
 pub mod map_list;
 /// Simple, small types that don't need their own module.
