@@ -47,3 +47,11 @@ pub struct MethodId {
     /// The string must conform to the syntax for `MemberName`.
     pub name_idx: uint,
 }
+
+#[derive(Debug, Pread, Pwrite)]
+pub struct CallSiteId {
+    /// Offset from the start of the file to call site definition.
+    /// The offset should be in the `data` section,
+    /// and the data there should be in the format specified by `call_site_item`.
+    pub call_site_off: uint,
+}
