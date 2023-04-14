@@ -13,9 +13,19 @@ pub enum StringError {
     ScrollError(#[from] scroll::Error),
 }
 
-#[derive(Debug)]
-pub struct StringId {
-    pub offset: uint,
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct StringId(/* offset into data section */ uint);
+
+impl StringId {
+    pub fn offset(&self) -> uint {
+        self.0
+    }
+}
+
+impl From<StringId> for uint {
+    fn from(id: StringId) -> Self {
+        id.0
+    }
 }
 
 impl<'a> TryFromCtx<'a, scroll::Endian> for StringId {
@@ -23,12 +33,7 @@ impl<'a> TryFromCtx<'a, scroll::Endian> for StringId {
     fn try_from_ctx(src: &'a [u8], ctx: scroll::Endian) -> Result<(Self, usize), Self::Error> {
         let offset = &mut 0;
         let str_data_off: uint = src.gread_with(offset, ctx)?;
-        Ok((
-            Self {
-                offset: str_data_off,
-            },
-            *offset,
-        ))
+        Ok((Self(str_data_off), *offset))
     }
 }
 
@@ -36,7 +41,7 @@ impl TryIntoCtx<scroll::Endian> for StringId {
     type Error = StringError;
     fn try_into_ctx(self, dst: &mut [u8], ctx: scroll::Endian) -> Result<usize, Self::Error> {
         let offset = &mut 0;
-        dst.gwrite_with(self.offset, offset, ctx)?;
+        dst.gwrite_with(self.0, offset, ctx)?;
         Ok(*offset)
     }
 }
@@ -48,7 +53,7 @@ pub struct StringData<'a> {
     /// That is, this is the decoded length of the string.
     /// The encoded length is implied by the position of the 0 byte.
     pub size: u64,
-    /// a series of MUTF-8 code units (a.k.a. octets, a.k.a. bytes) followed by a byte of value 0.
+    /// A series of MUTF-8 code units (a.k.a. octets, a.k.a. bytes) followed by a byte of value 0.
     /// See ["MUTF-8 (Modified UTF-8) Encoding"](encoding) for details and discussion about the data format.
     ///
     /// [encoding]: https://source.android.com/docs/core/runtime/dex-format#mutf-8

@@ -1,3 +1,5 @@
-- [ ] Unit tests for all data types to ensure they are 1:1 with the spec
 - [ ] Implement low level data types
+  - [ ] Unit tests to ensure they are 1:1 with the spec
 - [ ] Implement high level API around data types
+- [ ] Parallelize serialization/deserialization via `rayon`
+  - [ ] Use `rayon` feature in `dashmap`

@@ -1,4 +1,3 @@
-use crate::Result;
 use scroll::{ctx::TryFromCtx, Pread};
 use std::{cmp::Ordering, fmt::Debug};
 
@@ -17,16 +16,16 @@ impl<'a> Section<'a> {
     /// Binary search the contents of this section.
     /// * The items in the section should be of fixed size.
     /// * The items must be sorted in the order that predicate expects.
-    pub(crate) fn binary_search<'b, F, T, S, C: Copy>(
+    pub(crate) fn binary_search<'b, F, T, S, C: Copy, E>(
         &self,
         element: &'b S,
         ctx: C,
         predicate: F,
-    ) -> Result<Option<usize>>
+    ) -> Result<Option<usize>, E>
     where
-        S: std::fmt::Debug,
-        F: Fn(&T, &S) -> Result<Ordering>,
+        F: Fn(&T, &S) -> Result<Ordering, E>,
         T: TryFromCtx<'a, C, Error = scroll::Error> + Debug,
+        E: From<scroll::Error>,
     {
         if self.inner.is_empty() {
             return Ok(None);

@@ -1,11 +1,16 @@
-use crate::raw::{header::HeaderError, map_list::MapListError};
+use crate::{
+    dex::strings::StringCacheError,
+    raw::{header::HeaderError, map_list::MapListError},
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("error parsing header: {0}")]
-    HeaderError(#[from] HeaderError),
+    Header(#[from] HeaderError),
     #[error("error parsing map_list: {0}")]
-    MapListError(#[from] MapListError),
+    MapList(#[from] MapListError),
+    #[error("error in string cache: {0}")]
+    StringCache(#[from] StringCacheError),
     #[error("read error: {0}")]
-    ScrollError(#[from] scroll::Error),
+    Scroll(#[from] scroll::Error),
 }

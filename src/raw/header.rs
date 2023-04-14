@@ -24,7 +24,7 @@ pub enum HeaderError {
     IoError(#[from] std::io::Error),
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, Default)]
 #[derivative(Debug)]
 pub struct Header<'a> {
     pub version: Version,
@@ -51,6 +51,43 @@ pub struct Header<'a> {
     pub class_defs_off: uint,
     pub data_size: uint,
     pub data_off: uint,
+}
+
+impl<'a> Header<'a> {
+    pub fn data_section(&self) -> std::ops::Range<uint> {
+        self.data_off..self.data_off + self.data_size
+    }
+
+    pub fn in_data_section(&self, offset: uint) -> bool {
+        self.data_section().contains(&offset)
+    }
+}
+
+impl<'a> Clone for Header<'a> {
+    /// The [`Clone`] implementation for [`Header`] is a shallow clone,
+    /// and only clones offsets and sizes.
+    fn clone(&self) -> Self {
+        Self {
+            link_size: self.link_size,
+            link_off: self.link_off,
+            map_off: self.map_off,
+            string_ids_size: self.string_ids_size,
+            string_ids_off: self.string_ids_off,
+            type_ids_size: self.type_ids_size,
+            type_ids_off: self.type_ids_off,
+            proto_ids_size: self.proto_ids_size,
+            proto_ids_off: self.proto_ids_off,
+            field_ids_size: self.field_ids_size,
+            field_ids_off: self.field_ids_off,
+            method_ids_size: self.method_ids_size,
+            method_ids_off: self.method_ids_off,
+            class_defs_size: self.class_defs_size,
+            class_defs_off: self.class_defs_off,
+            data_size: self.data_size,
+            data_off: self.data_off,
+            ..Default::default()
+        }
+    }
 }
 
 impl<'a> TryFromCtx<'a, scroll::Endian> for Header<'a> {
@@ -154,6 +191,7 @@ impl<'a> TryIntoCtx<scroll::Endian> for Header<'a> {
     }
 }
 
+#[derive(Default)]
 pub struct Version(uint, uint, uint);
 
 impl std::fmt::Display for Version {
