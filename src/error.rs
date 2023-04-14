@@ -1,5 +1,5 @@
 use crate::{
-    dex::strings::StringCacheError,
+    dex::strings::StringReadError,
     raw::{header::HeaderError, map_list::MapListError},
 };
 
@@ -9,8 +9,8 @@ pub enum Error {
     Header(#[from] HeaderError),
     #[error("error parsing map_list: {0}")]
     MapList(#[from] MapListError),
-    #[error("error in string cache: {0}")]
-    StringCache(#[from] StringCacheError),
+    #[error("error reading string: {0}")]
+    StringRead(#[from] StringReadError),
     #[error("read error: {0}")]
     Scroll(#[from] scroll::Error),
 }

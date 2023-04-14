@@ -1,7 +1,7 @@
 use scroll::Pread;
 
 use crate::raw::{header::Header, map_list::MapList, tysize};
-use strings::StringCache;
+use strings::Strings;
 
 mod section;
 pub mod strings;
@@ -12,14 +12,14 @@ pub struct DexFile<'a> {
     src: &'a [u8],
     header: Header<'a>,
     map_list: MapList,
-    strings: StringCache<'a>,
+    strings: Strings<'a>,
 }
 
 impl<'a> DexFile<'a> {
     pub fn new(src: &'a [u8]) -> crate::Result<Self> {
         let header: Header = src.pread_with(0, scroll::LE)?;
         let map_list: MapList = src.pread_with(header.map_off as usize, scroll::LE)?;
-        let strings = StringCache::new(
+        let strings = Strings::new(
             src,
             /* shallow clone */ header.clone(),
             raw_string_ids_section(src, &header),
@@ -37,7 +37,7 @@ impl<'a> DexFile<'a> {
     pub fn map_list(&self) -> &MapList {
         &self.map_list
     }
-    pub fn strings(&self) -> &StringCache {
+    pub fn strings(&self) -> &Strings {
         &self.strings
     }
 }

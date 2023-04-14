@@ -17,11 +17,11 @@ use super::section::Section;
 /// This is the same as [`StringId`]'s data offset, but it's a
 /// direct typedef to [`uint`] instead of a newtype struct.
 type RawStringId = uint;
-type Result<T> = std::result::Result<T, StringCacheError>;
+type Result<T> = std::result::Result<T, StringReadError>;
 pub type DexString = Arc<String>;
 
 #[derive(Debug, thiserror::Error)]
-pub enum StringCacheError {
+pub enum StringReadError {
     #[error("string not found")]
     StringNotFound,
     #[error("string index {0} is out of bounds")]
@@ -36,7 +36,7 @@ pub enum StringCacheError {
     ScrollError(#[from] scroll::Error),
 }
 
-pub struct StringCache<'a> {
+pub struct Strings<'a> {
     src: &'a [u8],
     header: Header<'a>,
     // string id section
@@ -46,7 +46,7 @@ pub struct StringCache<'a> {
     added_strings: Vec<Vec<u8>>,
 }
 
-impl<'a> StringCache<'a> {
+impl<'a> Strings<'a> {
     pub fn new(src: &'a [u8], header: Header<'a>, section: Section<'a>) -> Self {
         Self {
             src,
@@ -64,7 +64,7 @@ impl<'a> StringCache<'a> {
 
     pub fn id_at(&self, index: uint) -> Result<StringId> {
         if index >= self.header.string_ids_size {
-            return Err(StringCacheError::IndexOutOfBounds(index));
+            return Err(StringReadError::IndexOutOfBounds(index));
         }
         let offset = self.header.string_ids_off as usize + index as usize * tysize::STRING_ID;
         let id = self.src.pread_with(offset, scroll::LE)?;
@@ -77,11 +77,11 @@ impl<'a> StringCache<'a> {
             Some(v) => Ok(v.value().clone()),
             None => {
                 if !self.header.in_data_section(data_offset) {
-                    return Err(StringCacheError::OffsetOutOfBounds(data_offset));
+                    return Err(StringReadError::OffsetOutOfBounds(data_offset));
                 }
                 let data: StringData = self.src.pread_with(data_offset as usize, scroll::LE)?;
                 let str = from_java_cesu8(data.data)
-                    .map_err(|e| StringCacheError::Malformed(data_offset, e))?
+                    .map_err(|e| StringReadError::Malformed(data_offset, e))?
                     .into_owned()
                     .into_arc();
                 self.read_cache.insert(data_offset, str.clone());
@@ -96,9 +96,9 @@ impl<'a> StringCache<'a> {
             .section
             .binary_search(&element, scroll::LE, move |offset: &uint, element: _| {
                 let data: StringData = self.src.pread_with(*offset as usize, scroll::LE)?;
-                Ok::<_, StringCacheError>((**element).cmp(data.data))
+                Ok::<_, StringReadError>((**element).cmp(data.data))
             })?
-            .ok_or_else(|| StringCacheError::StringNotFound)?;
+            .ok_or_else(|| StringReadError::StringNotFound)?;
         self.id_at(index as uint)
     }
 
