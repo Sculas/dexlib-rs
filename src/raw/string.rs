@@ -5,14 +5,6 @@ use scroll::{
     Pread, Pwrite,
 };
 
-#[derive(Debug, thiserror::Error)]
-pub enum StringError {
-    #[error("invalid size: {0}")]
-    InvalidSize(usize),
-    #[error("read error: {0}")]
-    ScrollError(#[from] scroll::Error),
-}
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct StringId(/* offset into data section */ uint);
 
@@ -29,7 +21,7 @@ impl From<StringId> for uint {
 }
 
 impl<'a> TryFromCtx<'a, scroll::Endian> for StringId {
-    type Error = StringError;
+    type Error = scroll::Error;
     fn try_from_ctx(src: &'a [u8], ctx: scroll::Endian) -> Result<(Self, usize), Self::Error> {
         let offset = &mut 0;
         let str_data_off: uint = src.gread_with(offset, ctx)?;
@@ -38,7 +30,7 @@ impl<'a> TryFromCtx<'a, scroll::Endian> for StringId {
 }
 
 impl TryIntoCtx<scroll::Endian> for StringId {
-    type Error = StringError;
+    type Error = scroll::Error;
     fn try_into_ctx(self, dst: &mut [u8], ctx: scroll::Endian) -> Result<usize, Self::Error> {
         let offset = &mut 0;
         dst.gwrite_with(self.0, offset, ctx)?;
@@ -62,7 +54,7 @@ pub struct StringData<'a> {
 }
 
 impl<'a> TryFromCtx<'a, scroll::Endian> for StringData<'a> {
-    type Error = StringError;
+    type Error = scroll::Error;
     fn try_from_ctx(src: &'a [u8], _ctx: scroll::Endian) -> Result<(Self, usize), Self::Error> {
         let offset = &mut 0;
         // this is the decoded/actual length of the string
@@ -76,7 +68,7 @@ impl<'a> TryFromCtx<'a, scroll::Endian> for StringData<'a> {
 }
 
 impl<'a> TryIntoCtx<scroll::Endian> for StringData<'a> {
-    type Error = StringError;
+    type Error = scroll::Error;
     fn try_into_ctx(self, dst: &mut [u8], _ctx: scroll::Endian) -> Result<usize, Self::Error> {
         let offset = &mut 0;
         uleb128::write(dst, offset, self.size)?;

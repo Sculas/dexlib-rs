@@ -3,7 +3,7 @@ use scroll::Pread;
 use crate::raw::{header::Header, map_list::MapList, tysize};
 use strings::Strings;
 
-mod section;
+pub(crate) mod section;
 pub mod strings;
 #[macro_use]
 mod utils;
@@ -22,7 +22,7 @@ impl<'a> DexFile<'a> {
         let strings = Strings::new(
             src,
             /* shallow clone */ header.clone(),
-            raw_string_ids_section(src, &header),
+            raw_string_ids_section(src, &header)?,
         );
         Ok(Self {
             src,
@@ -49,3 +49,30 @@ section!(DexFile, proto_ids, tysize::PROTO_ID);
 section!(DexFile, field_ids, tysize::FIELD_ID);
 section!(DexFile, method_ids, tysize::METHOD_ID);
 section!(DexFile, class_defs, tysize::CLASS_DEF);
+section!(
+    map(CallSiteIdItem): DexFile,
+    call_site_ids,
+    tysize::CALL_SITE_ID
+);
+section!(
+    map(MethodHandleItem): DexFile,
+    method_handles,
+    tysize::METHOD_HANDLE
+);
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    #[ignore = "debug"]
+    pub fn header() {
+        let dex = crate::t::dex!();
+        println!("{:#?}", dex.header());
+    }
+
+    #[test]
+    #[ignore = "debug"]
+    pub fn map_list() {
+        let dex = crate::t::dex!();
+        println!("{:#?}", dex.map_list());
+    }
+}

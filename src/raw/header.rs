@@ -19,7 +19,7 @@ pub enum HeaderError {
     #[error("invalid checksum")]
     InvalidChecksum,
     #[error("read error: {0}")]
-    ScrollError(#[from] scroll::Error),
+    Scroll(#[from] scroll::Error),
     #[error("io error: {0}")]
     IoError(#[from] std::io::Error),
 }
@@ -277,7 +277,7 @@ pub enum VersionError {
     #[error("invalid version: {0}")]
     InvalidVersion(uint),
     #[error("read error: {0}")]
-    ScrollError(#[from] scroll::Error),
+    Scroll(#[from] scroll::Error),
 }
 
 // dex\nXXX\0

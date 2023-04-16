@@ -6,8 +6,8 @@ use scroll::Pread;
 use crate::{
     raw::{
         header::Header,
-        string::{StringData, StringError, StringId},
-        tysize, uint,
+        string::{StringData, StringId},
+        uint,
     },
     utils::{nohash::BuildNoHashHasher, IntoArc},
 };
@@ -31,9 +31,7 @@ pub enum StringReadError {
     #[error("string at offset {0} is malformed")]
     Malformed(RawStringId, #[source] Cesu8DecodingError),
     #[error("read error: {0}")]
-    StringError(#[from] StringError),
-    #[error("read error: {0}")]
-    ScrollError(#[from] scroll::Error),
+    Scroll(#[from] scroll::Error),
 }
 
 pub struct Strings<'a> {
@@ -63,11 +61,10 @@ impl<'a> Strings<'a> {
     }
 
     pub fn id_at(&self, index: uint) -> Result<StringId> {
-        if index >= self.header.string_ids_size {
+        if index >= self.len() {
             return Err(StringReadError::IndexOutOfBounds(index));
         }
-        let offset = self.header.string_ids_off as usize + index as usize * tysize::STRING_ID;
-        let id = self.src.pread_with(offset, scroll::LE)?;
+        let id = self.section.index(index as usize, scroll::LE)?;
         Ok(id)
     }
 

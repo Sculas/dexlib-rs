@@ -1,5 +1,5 @@
 use crate::{
-    dex::strings::StringReadError,
+    dex::{section::Error as SectionError, strings::StringReadError},
     raw::{header::HeaderError, map_list::MapListError},
 };
 
@@ -11,6 +11,8 @@ pub enum Error {
     MapList(#[from] MapListError),
     #[error("error reading string: {0}")]
     StringRead(#[from] StringReadError),
+    #[error("error reading from section: {0}")]
+    Section(#[from] SectionError),
     #[error("read error: {0}")]
     Scroll(#[from] scroll::Error),
 }

@@ -1,9 +1,11 @@
 #![allow(non_camel_case_types, dead_code)] // TODO: remove dead_code
 
 pub mod classdef;
+pub mod encoded_value;
 pub mod flags;
 pub mod header;
 pub mod map_list;
+pub mod method_handle;
 /// Simple, small types that don't need their own module.
 pub mod simple;
 pub mod string;
@@ -26,6 +28,10 @@ pub(crate) type sleb128 = crate::utils::leb128::Sleb128;
 pub(crate) type uleb128 = crate::utils::leb128::Uleb128;
 
 pub(crate) const NO_INDEX: uint = 0xffffffff;
+pub(crate) const RESERVED_VALUE: usize = 0;
+
+pub(crate) type RawStringId = uint;
+pub(crate) type RawTypeId = ulong;
 
 pub mod tysize {
     pub const STRING_ID: usize = 0x04;

@@ -11,7 +11,7 @@ pub enum MapListError {
     #[error("invalid item type in map_list: {0}")]
     InvalidTypeId(u16),
     #[error("read error: {0}")]
-    ScrollError(#[from] scroll::Error),
+    Scroll(#[from] scroll::Error),
 }
 
 /// List of the entire contents of a file, in order. A given type must appear at most
@@ -33,6 +33,7 @@ impl TryIntoCtx<scroll::Endian> for MapList {
     type Error = MapListError;
     fn try_into_ctx(self, dst: &mut [u8], ctx: scroll::Endian) -> Result<usize, Self::Error> {
         let offset = &mut 0;
+        dst.gwrite_with(self.0.len() as uint, offset, ctx)?;
         try_gwrite_vec_with!(dst, offset, self.0, ctx);
         Ok(*offset)
     }
@@ -85,8 +86,6 @@ pub enum ItemType {
     HiddenapiClassDataItem = 0xF000,
 }
 
-const RESERVED_VALUE: u16 = 0;
-
 /// Single item of the MapList.
 #[derive(Debug, Clone, Copy)]
 pub struct MapItem {
@@ -105,10 +104,7 @@ impl<'a> TryFromCtx<'a, scroll::Endian> for MapItem {
         let ty: ushort = src.gread_with(offset, ctx)?;
         let item_type = ItemType::from_u16(ty).ok_or_else(|| MapListError::InvalidTypeId(ty))?;
         let __reserved: ushort = src.gread_with(offset, ctx)?;
-        debug_assert_eq!(
-            __reserved, RESERVED_VALUE,
-            "reserved field in map_item should normally be {RESERVED_VALUE}"
-        );
+        debug_assert_eq!(__reserved, RESERVED_VALUE as ushort);
         let size: uint = src.gread_with(offset, ctx)?;
         let item_offset: uint = src.gread_with(offset, ctx)?;
         Ok((
@@ -127,7 +123,7 @@ impl TryIntoCtx<scroll::Endian> for MapItem {
     fn try_into_ctx(self, dst: &mut [u8], ctx: scroll::Endian) -> Result<usize, Self::Error> {
         let offset = &mut 0;
         dst.gwrite_with(self.item_type as ushort, offset, ctx)?;
-        dst.gwrite_with(RESERVED_VALUE, offset, ctx)?;
+        dst.gwrite_with(RESERVED_VALUE as ushort, offset, ctx)?;
         dst.gwrite_with(self.size, offset, ctx)?;
         dst.gwrite_with(self.offset, offset, ctx)?;
         Ok(*offset)

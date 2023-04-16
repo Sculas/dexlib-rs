@@ -1,14 +1,14 @@
 use crate::raw::*;
 use scroll::{Pread, Pwrite};
 
-#[derive(Debug, Pread, Pwrite)]
+#[derive(Debug, Clone, Copy, Pread, Pwrite)]
 pub struct TypeId {
     /// Index into the `string_ids` list for the descriptor string of this type.
     /// The string must conform to the syntax for `TypeDescriptor`.
     pub descriptor_idx: uint,
 }
 
-#[derive(Debug, Pread, Pwrite)]
+#[derive(Debug, Clone, Copy, Pread, Pwrite)]
 pub struct ProtoId {
     /// Index into the `string_ids` list for the short-form descriptor string of this prototype.
     /// The string must conform to the syntax for `ShortyDescriptor`
@@ -24,7 +24,7 @@ pub struct ProtoId {
     pub parameters_off: uint,
 }
 
-#[derive(Debug, Pread, Pwrite)]
+#[derive(Debug, Clone, Copy, Pread, Pwrite)]
 pub struct FieldId {
     /// Index into the `type_ids` list for the definer of this field.
     /// This must be a class type, and not an array or primitive type.
@@ -36,7 +36,7 @@ pub struct FieldId {
     pub name_idx: uint,
 }
 
-#[derive(Debug, Pread, Pwrite)]
+#[derive(Debug, Clone, Copy, Pread, Pwrite)]
 pub struct MethodId {
     /// Index into the `type_ids` list for the definer of this field.
     /// This must be a class type, and not an array or primitive type.
@@ -48,7 +48,7 @@ pub struct MethodId {
     pub name_idx: uint,
 }
 
-#[derive(Debug, Pread, Pwrite)]
+#[derive(Debug, Clone, Copy, Pread, Pwrite)]
 pub struct CallSiteId {
     /// Offset from the start of the file to call site definition.
     /// The offset should be in the `data` section,
