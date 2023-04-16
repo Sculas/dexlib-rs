@@ -98,8 +98,9 @@ pub enum EncodedValueError {
     Scroll(#[from] scroll::Error),
 }
 
+// Taken from: https://github.com/letmutx/dex-parser/blob/c3bc1fc/src/encoded_value.rs
 macro_rules! try_extended_gread {
-    ($src:expr, $offset:expr, $value_arg:expr, $size:expr, $sign_extended:literal) => {{
+    ($src:ident, $offset:ident, $value_arg:ident, $size:literal, $sign_extended:literal) => {{
         if *$offset + $value_arg >= $src.len() {
             return Err(EncodedValueError::Scroll(scroll::Error::TooBig {
                 size: *$offset + $value_arg,
@@ -113,11 +114,7 @@ macro_rules! try_extended_gread {
             i += 1;
             last_byte_is_neg = (*value as byte) < 0;
         }
-        // fill the rest of the bytes with the value of the sign bit
-        // if the last byte is negative, sign bit is 1. so we fill it
-        // with 0xFF, for positive values sign bit is 0, so we don't need
-        // to do anything
-        // ref. https://en.wikipedia.org/wiki/Sign_extension
+        // https://en.wikipedia.org/wiki/Sign_extension
         if $sign_extended && last_byte_is_neg {
             while i < $size {
                 bytes[i] = 0xFF;
@@ -128,13 +125,13 @@ macro_rules! try_extended_gread {
         *$offset += 1 + $value_arg;
         value
     }};
-    ($src:expr, $offset:expr, $value_arg:expr, $size:expr, ZERO) => {{
+    ($src:ident, $offset:ident, $value_arg:ident, $size:literal, ZERO) => {{
         try_extended_gread!($src, $offset, $value_arg, $size, false)
     }};
-    ($src:expr, $offset:expr, $value_arg:expr, $size:expr, SIGN) => {{
+    ($src:ident, $offset:ident, $value_arg:ident, $size:literal, SIGN) => {{
         try_extended_gread!($src, $offset, $value_arg, $size, true)
     }};
-    ($src:expr, $offset:expr, $value_arg:expr, $size:expr) => {{
+    ($src:ident, $offset:ident, $value_arg:ident, $size:literal) => {{
         try_extended_gread!($src, $offset, $value_arg, $size, ZERO)
     }};
 }
