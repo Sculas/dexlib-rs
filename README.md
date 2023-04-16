@@ -1,2 +1,5 @@
 # dexlib-rs
-Rust parser/writer for the Dalvik executable format
+
+Rust parser/writer for the Dalvik executable format.
+
+**Currently WIP.**
