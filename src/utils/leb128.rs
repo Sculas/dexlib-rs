@@ -27,8 +27,8 @@ impl Uleb128 {
 
     /// Write a variable length u64 to `src` at `offset`
     #[inline]
-    pub fn write(src: &mut [u8], offset: &mut usize, value: u64) -> scroll::Result<()> {
-        src.gwrite(Uleb128 { value, count: 0 }, offset)?;
+    pub fn write(dst: &mut [u8], offset: &mut usize, value: u64) -> scroll::Result<()> {
+        dst.gwrite(Uleb128 { value, count: 0 }, offset)?;
         Ok(())
     }
 }
