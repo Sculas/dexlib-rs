@@ -30,8 +30,12 @@ pub(crate) type uleb128 = crate::utils::leb128::Uleb128;
 pub(crate) const NO_INDEX: uint = 0xffffffff;
 pub(crate) const RESERVED_VALUE: usize = 0;
 
-pub(crate) type RawStringId = uint;
-pub(crate) type RawTypeId = ulong;
+pub(crate) type RawStringIndex = uint;
+pub(crate) type RawTypeIndex = uint;
+pub(crate) type RawProtoIndex = uint;
+pub(crate) type RawFieldIndex = uint;
+pub(crate) type RawMethodIndex = uint;
+pub(crate) type RawMethodHandleIndex = uint;
 
 pub mod tysize {
     pub const STRING_ID: usize = 0x04;
