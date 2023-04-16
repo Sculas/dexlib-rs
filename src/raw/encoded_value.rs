@@ -1,5 +1,3 @@
-use crate::dex::DexFile;
-use crate::raw::method_handle::MethodHandleError;
 use crate::raw::*;
 use annotation::EncodedAnnotation;
 use num_derive::FromPrimitive;
@@ -90,8 +88,6 @@ pub enum EncodedValueError {
     #[error("section error: {0}")]
     Section(#[from] crate::dex::section::Error),
     #[error("read error: {0}")]
-    MethodHandle(#[from] MethodHandleError),
-    #[error("read error: {0}")]
     Scroll(#[from] scroll::Error),
 }
 
@@ -133,9 +129,9 @@ macro_rules! try_extended_gread {
     }};
 }
 
-impl<'a> TryFromCtx<'a, &DexFile<'_>> for EncodedValue {
+impl<'a> TryFromCtx<'a> for EncodedValue {
     type Error = EncodedValueError;
-    fn try_from_ctx(src: &'a [u8], ctx: &DexFile) -> Result<(Self, usize), Self::Error> {
+    fn try_from_ctx(src: &'a [u8], _: ()) -> Result<(Self, usize), Self::Error> {
         let offset = &mut 0;
         let header: ubyte = src.gread(offset)?;
         let value_arg = (header >> 5) as usize;
@@ -201,12 +197,12 @@ impl<'a> TryFromCtx<'a, &DexFile<'_>> for EncodedValue {
             }
             ValueType::Array => {
                 debug_assert_eq!(value_arg, 0);
-                let arr: EncodedArray = src.gread_with(offset, ctx)?;
+                let arr: EncodedArray = src.gread(offset)?;
                 EncodedValue::Array(arr.into_inner())
             }
             ValueType::Annotation => {
                 debug_assert_eq!(value_arg, 0);
-                EncodedValue::Annotation(src.gread_with(offset, ctx)?)
+                EncodedValue::Annotation(src.gread(offset)?)
             }
             ValueType::Null => {
                 debug_assert_eq!(value_arg, 0);
@@ -373,12 +369,12 @@ impl EncodedArray {
     }
 }
 
-impl<'a> TryFromCtx<'a, &DexFile<'_>> for EncodedArray {
+impl<'a> TryFromCtx<'a> for EncodedArray {
     type Error = EncodedValueError;
-    fn try_from_ctx(src: &'a [u8], ctx: &DexFile) -> Result<(Self, usize), Self::Error> {
+    fn try_from_ctx(src: &'a [u8], _: ()) -> Result<(Self, usize), Self::Error> {
         let offset = &mut 0;
         let size = uleb128::read(src, offset)?;
-        let values = try_gread_vec_with!(src, offset, size, ctx);
+        let values = try_gread_vec_with!(src, offset, size, ());
         Ok((Self(values), *offset))
     }
 }
@@ -393,6 +389,34 @@ impl TryIntoCtx for EncodedArray {
     }
 }
 
+/// An array of [`EncodedValue`]s.
+#[derive(Debug, Default)]
+pub struct EncodedArrayItem(EncodedArray);
+
+impl EncodedArrayItem {
+    pub(crate) fn into_inner(self) -> EncodedArray {
+        self.0
+    }
+}
+
+impl<'a> TryFromCtx<'a> for EncodedArrayItem {
+    type Error = EncodedValueError;
+    fn try_from_ctx(src: &'a [u8], _: ()) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let inner = src.gread(offset)?;
+        Ok((Self(inner), *offset))
+    }
+}
+
+impl TryIntoCtx for EncodedArrayItem {
+    type Error = EncodedValueError;
+    fn try_into_ctx(self, dst: &mut [u8], _: ()) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+        dst.gwrite(self.0, offset)?;
+        Ok(*offset)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -401,12 +425,10 @@ mod tests {
         ($name:ident, $value:expr) => {
             #[test]
             fn $name() {
-                let dex = crate::t::dex!();
                 let v = $value;
                 let mut buf = [0u8; 1024];
                 let len = scroll::ctx::TryIntoCtx::try_into_ctx(v.clone(), &mut buf, ()).unwrap();
-                let (v2, _): (super::EncodedValue, _) =
-                    scroll::ctx::TryFromCtx::try_from_ctx(&buf[..len], &dex).unwrap();
+                let (v2, _) = scroll::ctx::TryFromCtx::try_from_ctx(&buf[..len], ()).unwrap();
                 assert_eq!(v, v2);
             }
         };

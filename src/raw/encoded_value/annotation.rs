@@ -1,4 +1,4 @@
-use crate::{dex::DexFile, raw::*};
+use crate::raw::*;
 use scroll::{
     ctx::{TryFromCtx, TryIntoCtx},
     Pread, Pwrite,
@@ -13,13 +13,13 @@ pub struct EncodedAnnotation {
     pub elements: Vec<AnnotationElement>,
 }
 
-impl<'a> TryFromCtx<'a, &DexFile<'_>> for EncodedAnnotation {
+impl<'a> TryFromCtx<'a> for EncodedAnnotation {
     type Error = EncodedValueError;
-    fn try_from_ctx(src: &'a [u8], ctx: &DexFile) -> Result<(Self, usize), Self::Error> {
+    fn try_from_ctx(src: &'a [u8], _: ()) -> Result<(Self, usize), Self::Error> {
         let offset = &mut 0;
         let type_idx = uleb128::read(src, offset)?;
         let size = uleb128::read(src, offset)?;
-        let elements = try_gread_vec_with!(src, offset, size, ctx);
+        let elements = try_gread_vec_with!(src, offset, size, ());
         Ok((
             Self {
                 type_idx,
@@ -48,12 +48,12 @@ pub struct AnnotationElement {
     pub value: EncodedValue,
 }
 
-impl<'a> TryFromCtx<'a, &DexFile<'_>> for AnnotationElement {
+impl<'a> TryFromCtx<'a> for AnnotationElement {
     type Error = EncodedValueError;
-    fn try_from_ctx(src: &'a [u8], ctx: &DexFile) -> Result<(Self, usize), Self::Error> {
+    fn try_from_ctx(src: &'a [u8], _: ()) -> Result<(Self, usize), Self::Error> {
         let offset = &mut 0;
         let name_idx = uleb128::read(src, offset)?;
-        let value = src.gread_with(offset, ctx)?;
+        let value = src.gread(offset)?;
         Ok((Self { name_idx, value }, *offset))
     }
 }
