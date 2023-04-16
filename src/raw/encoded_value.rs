@@ -289,6 +289,8 @@ fn w_enc_long(w: &mut [u8], mut v: long) -> Result<(u8, usize), EncodedValueErro
 macro_rules! wrt_f {
     ($w:ident, $v:expr) => {{
         let mut offset = 0;
+        // FIXME: This is not a very space efficient way to do this.
+        // Can this be done better?
         $w.gwrite_with($v, &mut offset, scroll::LE)?;
         Ok((offset as u8 - 1, offset))
     }};
