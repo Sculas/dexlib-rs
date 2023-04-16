@@ -389,7 +389,7 @@ impl TryIntoCtx for EncodedArray {
     }
 }
 
-/// An array of [`EncodedValue`]s.
+/// An [`EncodedArray`] written as a single item.
 #[derive(Debug, Default)]
 pub struct EncodedArrayItem(EncodedArray);
 
