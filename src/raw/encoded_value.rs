@@ -8,11 +8,8 @@ use scroll::{
     ctx::{TryFromCtx, TryIntoCtx},
     Pread, Pwrite,
 };
-use values::*;
 
 pub mod annotation;
-pub mod catch_handlers;
-pub mod values;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EncodedValue {
@@ -23,13 +20,13 @@ pub enum EncodedValue {
     Long(long),
     Float(f32),
     Double(f64),
-    MethodType(EncodedMethodType),
-    MethodHandle(EncodedMethodHandle),
-    String(EncodedString),
-    Type(EncodedType),
-    Field(EncodedField),
-    Method(EncodedMethod),
-    Enum(EncodedEnum),
+    MethodType(uint),
+    MethodHandle(uint),
+    String(uint),
+    Type(uint),
+    Field(uint),
+    Method(uint),
+    Enum(uint),
     Array(Vec<EncodedValue>),
     Annotation(EncodedAnnotation),
     Null,
@@ -136,26 +133,6 @@ macro_rules! try_extended_gread {
     }};
 }
 
-macro_rules! decode {
-    ($ctx:ident, $type:ident, $section:ident($idx:ident) $(: $err_ty:ty)?) => {
-        $ctx.$section()?
-            .index($idx as usize, scroll::LE)
-            .map_err(|e| decode!(@err_matcher ($type, $idx) e $($err_ty)?))?
-    };
-    (@err_matcher ($($tt:tt)*) $e:ident) => {
-        match $e {
-            scroll::Error::BadOffset(_) => EncodedValueError::ValueNotFound($($tt)*),
-            e => EncodedValueError::Scroll(e),
-        }
-    };
-    (@err_matcher ($($tt:tt)*) $e:ident $err_ty:ty) => {
-        match $e {
-            <$err_ty>::Scroll(scroll::Error::BadOffset(_)) => EncodedValueError::ValueNotFound($($tt)*),
-            e => e.into(),
-        }
-    };
-}
-
 impl<'a> TryFromCtx<'a, &DexFile<'_>> for EncodedValue {
     type Error = EncodedValueError;
     fn try_from_ctx(src: &'a [u8], ctx: &DexFile) -> Result<(Self, usize), Self::Error> {
@@ -196,73 +173,47 @@ impl<'a> TryFromCtx<'a, &DexFile<'_>> for EncodedValue {
             }
             ValueType::MethodType => {
                 debug_assert!(value_arg < 4);
-                let idx: uint = try_extended_gread!(src, offset, value_arg, 4);
-                let id = decode!(ctx, value_type, proto_ids_section(idx));
-                EncodedValue::MethodType(EncodedMethodType(idx, id))
+                EncodedValue::MethodType(try_extended_gread!(src, offset, value_arg, 4))
             }
             ValueType::MethodHandle => {
                 debug_assert!(value_arg < 4);
-                let idx: uint = try_extended_gread!(src, offset, value_arg, 4);
-                // FIXME: this is a hack to make tests pass
-                let id = if cfg!(not(test)) {
-                    decode!(
-                        ctx,
-                        value_type,
-                        method_handles_section(idx): MethodHandleError
-                    )
-                } else {
-                    super::method_handle::MethodHandle {
-                        ty: super::method_handle::MethodHandleType::InvokeStatic,
-                        field_or_method_id: 0,
-                    }
-                };
-                EncodedValue::MethodHandle(EncodedMethodHandle(idx, id))
+                EncodedValue::MethodHandle(try_extended_gread!(src, offset, value_arg, 4))
             }
             ValueType::String => {
                 debug_assert!(value_arg < 4);
-                let idx: uint = try_extended_gread!(src, offset, value_arg, 4);
-                let id = decode!(ctx, value_type, string_ids_section(idx));
-                EncodedValue::String(EncodedString(idx, id))
+                EncodedValue::String(try_extended_gread!(src, offset, value_arg, 4))
             }
             ValueType::Type => {
                 debug_assert!(value_arg < 4);
-                let idx: uint = try_extended_gread!(src, offset, value_arg, 4);
-                let id = decode!(ctx, value_type, type_ids_section(idx));
-                EncodedValue::Type(EncodedType(idx, id))
+                EncodedValue::Type(try_extended_gread!(src, offset, value_arg, 4))
             }
             ValueType::Field => {
                 debug_assert!(value_arg < 4);
-                let idx: uint = try_extended_gread!(src, offset, value_arg, 4);
-                let id = decode!(ctx, value_type, field_ids_section(idx));
-                EncodedValue::Field(EncodedField(idx, id))
+                EncodedValue::Field(try_extended_gread!(src, offset, value_arg, 4))
             }
             ValueType::Method => {
                 debug_assert!(value_arg < 4);
-                let idx: uint = try_extended_gread!(src, offset, value_arg, 4);
-                let id = decode!(ctx, value_type, method_ids_section(idx));
-                EncodedValue::Method(EncodedMethod(idx, id))
+                EncodedValue::Method(try_extended_gread!(src, offset, value_arg, 4))
             }
             ValueType::Enum => {
                 debug_assert!(value_arg < 4);
-                let idx: uint = try_extended_gread!(src, offset, value_arg, 4);
-                let id = decode!(ctx, value_type, field_ids_section(idx));
-                EncodedValue::Enum(EncodedEnum(idx, id))
+                EncodedValue::Enum(try_extended_gread!(src, offset, value_arg, 4))
             }
             ValueType::Array => {
-                debug_assert!(value_arg == 0);
+                debug_assert_eq!(value_arg, 0);
                 let arr: EncodedArray = src.gread_with(offset, ctx)?;
                 EncodedValue::Array(arr.into_inner())
             }
             ValueType::Annotation => {
-                debug_assert!(value_arg == 0);
+                debug_assert_eq!(value_arg, 0);
                 EncodedValue::Annotation(src.gread_with(offset, ctx)?)
             }
             ValueType::Null => {
-                debug_assert!(value_arg == 0);
+                debug_assert_eq!(value_arg, 0);
                 EncodedValue::Null
             }
             ValueType::Boolean => {
-                debug_assert!(value_arg < 2);
+                debug_assert!(value_arg <= 1);
                 EncodedValue::Boolean(value_arg == 1)
             }
         };
@@ -376,25 +327,25 @@ impl TryIntoCtx for EncodedValue {
                 wrt_f!(dst, v.to_bits())
             }),
             EncodedValue::MethodType(v) => wrt!(w: |dst: &mut [u8]| {
-                w_enc_uint(dst, v.proto_idx())
+                w_enc_uint(dst, v)
             }),
             EncodedValue::MethodHandle(v) => wrt!(w: |dst: &mut [u8]| {
-                w_enc_uint(dst, v.method_handle_idx())
+                w_enc_uint(dst, v)
             }),
             EncodedValue::String(v) => wrt!(w: |dst: &mut [u8]| {
-                w_enc_uint(dst, v.string_idx())
+                w_enc_uint(dst, v)
             }),
             EncodedValue::Type(v) => wrt!(w: |dst: &mut [u8]| {
-                w_enc_uint(dst, v.type_idx())
+                w_enc_uint(dst, v)
             }),
             EncodedValue::Field(v) => wrt!(w: |dst: &mut [u8]| {
-                w_enc_uint(dst, v.field_idx())
+                w_enc_uint(dst, v)
             }),
             EncodedValue::Method(v) => wrt!(w: |dst: &mut [u8]| {
-                w_enc_uint(dst, v.method_idx())
+                w_enc_uint(dst, v)
             }),
             EncodedValue::Enum(v) => wrt!(w: |dst: &mut [u8]| {
-                w_enc_uint(dst, v.field_idx())
+                w_enc_uint(dst, v)
             }),
             EncodedValue::Array(v) => wrt!(w, RESERVED_VALUE as u8, |dst: &mut [u8]| {
                 dst.pwrite(EncodedArray(v), 0)
@@ -446,16 +397,6 @@ impl TryIntoCtx for EncodedArray {
 mod tests {
     use super::*;
 
-    macro_rules! uninit {
-        () => {
-            #[allow(invalid_value)]
-            // SAFETY: we never read from the uninitialized memory
-            unsafe {
-                std::mem::MaybeUninit::uninit().assume_init()
-            }
-        };
-    }
-
     macro_rules! value_test {
         ($name:ident, $value:expr) => {
             #[test]
@@ -478,19 +419,13 @@ mod tests {
     value_test!(long, EncodedValue::Long(long::MAX));
     value_test!(float, EncodedValue::Float(12345.0));
     value_test!(double, EncodedValue::Double(12345.0));
-    value_test!(
-        method_type,
-        EncodedValue::MethodType(EncodedMethodType(256, uninit!()))
-    );
-    value_test!(
-        method_handle,
-        EncodedValue::MethodHandle(EncodedMethodHandle(256, uninit!()))
-    );
-    value_test!(string, EncodedValue::String(EncodedString(256, uninit!())));
-    value_test!(enc_type, EncodedValue::Type(EncodedType(256, uninit!())));
-    value_test!(field, EncodedValue::Field(EncodedField(256, uninit!())));
-    value_test!(method, EncodedValue::Method(EncodedMethod(256, uninit!())));
-    value_test!(enc_enum, EncodedValue::Enum(EncodedEnum(256, uninit!())));
+    value_test!(method_type, EncodedValue::MethodType(256));
+    value_test!(method_handle, EncodedValue::MethodHandle(256));
+    value_test!(string, EncodedValue::String(256));
+    value_test!(enc_type, EncodedValue::Type(256));
+    value_test!(field, EncodedValue::Field(256));
+    value_test!(method, EncodedValue::Method(256));
+    value_test!(enc_enum, EncodedValue::Enum(256));
     value_test!(array, EncodedValue::Array(vec![EncodedValue::Byte(0x7f)]));
     value_test!(
         annotation,
