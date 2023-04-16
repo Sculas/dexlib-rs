@@ -44,7 +44,7 @@ pub struct StringData<'a> {
     /// Size of this string in UTF-16 code units (which is the "string length" in many systems).
     /// That is, this is the decoded length of the string.
     /// The encoded length is implied by the position of the 0 byte.
-    pub size: u64,
+    pub size: ulong,
     /// A series of MUTF-8 code units (a.k.a. octets, a.k.a. bytes) followed by a byte of value 0.
     /// See ["MUTF-8 (Modified UTF-8) Encoding"][1] for details and discussion about the data format.
     ///
