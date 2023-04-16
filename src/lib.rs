@@ -1,5 +1,3 @@
-#![feature(more_qualified_paths)]
-
 mod error;
 #[macro_use]
 pub(crate) mod utils;
