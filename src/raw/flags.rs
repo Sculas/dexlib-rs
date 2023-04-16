@@ -1,3 +1,4 @@
+use crate::raw::uleb128;
 use scroll::{
     ctx::{TryFromCtx, TryIntoCtx},
     Pread, Pwrite,
@@ -29,6 +30,22 @@ bitflags::bitflags! {
       const Constructor = 0x10000;
       const DeclaredSynchronized = 0x20000;
   }
+}
+
+impl AccessFlags {
+    pub fn try_from_uleb128(src: &[u8], offset: &mut usize) -> Result<Self, scroll::Error> {
+        let flags = uleb128::read(src, offset)?;
+        Ok(AccessFlags::from_bits_truncate(flags as u32))
+    }
+
+    pub fn try_into_uleb128(
+        &self,
+        dst: &mut [u8],
+        offset: &mut usize,
+    ) -> Result<(), scroll::Error> {
+        uleb128::write(dst, offset, self.bits() as u64)?;
+        Ok(())
+    }
 }
 
 impl<'a> TryFromCtx<'a, scroll::Endian> for AccessFlags {
