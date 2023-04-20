@@ -2,6 +2,7 @@
 
 pub mod class_data;
 pub mod classdef;
+pub mod code_item;
 pub mod encoded_value;
 pub mod flags;
 pub mod header;

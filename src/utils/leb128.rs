@@ -68,10 +68,10 @@ impl Sleb128 {
         Ok(tmp.into())
     }
 
-    /// Write a variable length i64 to `src` at `offset`
+    /// Write a variable length i64 to `dst` at `offset`
     #[inline]
-    pub fn write(src: &mut [u8], offset: &mut usize, value: i64) -> scroll::Result<()> {
-        src.gwrite(Sleb128 { value, count: 0 }, offset)?;
+    pub fn write(dst: &mut [u8], offset: &mut usize, value: i64) -> scroll::Result<()> {
+        dst.gwrite(Sleb128 { value, count: 0 }, offset)?;
         Ok(())
     }
 }

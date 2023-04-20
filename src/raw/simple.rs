@@ -55,3 +55,17 @@ pub struct CallSiteId {
     /// and the data there should be in the format specified by `call_site_item`.
     pub call_site_off: uint,
 }
+
+#[derive(Debug, Clone, Copy, Pread, Pwrite)]
+pub struct TryItem {
+    /// Start address of the block of code covered by this entry.
+    /// The address is a count of 16-bit code units to the start of the first covered instruction.
+    pub start_addr: uint,
+    /// Number of 16-bit code units covered by this entry.
+    /// The last code unit covered (inclusive) is `start_addr + insn_count - 1`.
+    pub insn_count: uint,
+    /// Offset in bytes from the start of the associated `encoded_catch_hander_list`
+    /// to the `encoded_catch_handler` for this entry.
+    /// This must be an offset to the start of an `encoded_catch_handler`.
+    pub handler_off: uint,
+}

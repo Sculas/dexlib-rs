@@ -7,7 +7,11 @@ use scroll::{
     Pread, Pwrite,
 };
 
-pub mod annotation;
+mod annotation;
+mod catch_handler;
+
+pub use annotation::*;
+pub use catch_handler::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EncodedValue {
