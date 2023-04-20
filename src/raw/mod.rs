@@ -10,6 +10,7 @@ pub mod method_handle;
 /// Simple, small types that don't need their own module.
 pub mod simple;
 pub mod string;
+pub mod type_list;
 
 pub(crate) type byte = i8;
 pub(crate) type ubyte = u8;
