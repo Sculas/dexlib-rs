@@ -1,5 +1,4 @@
 use crate::raw::*;
-use annotation::EncodedAnnotation;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use scroll::{

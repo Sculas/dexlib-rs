@@ -1,5 +1,6 @@
 #![allow(non_camel_case_types, dead_code)] // TODO: remove dead_code
 
+pub mod annotations;
 pub mod class_data;
 pub mod classdef;
 pub mod code_item;
