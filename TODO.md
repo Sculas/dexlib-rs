@@ -4,3 +4,5 @@
   - [ ] Implement call sites: [docs](https://source.android.com/docs/core/runtime/dex-format#call-site-item)
 - [ ] Parallelize serialization/deserialization via `rayon`
   - [ ] Use `rayon` feature in `dashmap`
+- [ ] Implement `dex` file writer
+  - [ ] Fix `TryIntoCtx` traits to use `&mut Vec<u8>` instead of `&mut [u8]`
