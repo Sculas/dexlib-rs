@@ -14,7 +14,7 @@ pub struct CodeItem {
     pub tries_size: ushort,
     pub debug_info_off: uint,
     pub insns: Vec<ushort>,
-    pub tries: Option<Vec<TryItem>>,
+    pub tries: Vec<TryItem>,
     pub handlers: Option<EncodedCatchHandlerList>,
 }
 
@@ -34,11 +34,7 @@ impl<'a> TryFromCtx<'a, scroll::Endian> for CodeItem {
         if insns_size % 2 != 0 && tries_size != 0 {
             src.gread_with::<TriesPadding>(offset, ctx)?;
         }
-        let tries = if tries_size != 0 {
-            Some(try_gread_vec_with!(src, offset, tries_size, ctx))
-        } else {
-            None
-        };
+        let tries = try_gread_vec_with!(src, offset, tries_size, ctx);
         let handlers = if tries_size != 0 {
             Some(src.gread(offset)?)
         } else {
@@ -76,9 +72,7 @@ impl TryIntoCtx<scroll::Endian> for CodeItem {
         if self.insns.len() % 2 != 0 && self.tries_size != 0 {
             dst.gwrite_with::<TriesPadding>(0, offset, ctx)?;
         }
-        if let Some(tries) = self.tries {
-            try_gwrite_vec_with!(dst, offset, tries, ctx);
-        }
+        try_gwrite_vec_with!(dst, offset, self.tries, ctx);
         if let Some(handlers) = self.handlers {
             dst.gwrite(handlers, offset)?;
         }
