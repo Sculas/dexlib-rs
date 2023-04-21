@@ -149,7 +149,7 @@ impl<'a> TryFromCtx<'a> for Sleb128 {
         let size = 64;
         let mut byte: u8;
         loop {
-            byte = src.gread(offset)?;
+            byte = src.gread_with(offset, scroll::LE)?;
 
             if shift == 63 && byte != 0x00 && byte != 0x7f {
                 return Err(Error::BadInput {
@@ -186,7 +186,7 @@ impl TryIntoCtx for Uleb128 {
     type Error = Error;
 
     #[inline]
-    fn try_into_ctx(self, dst: &mut [u8], _ctx: ()) -> Result<usize, Self::Error> {
+    fn try_into_ctx(self, dst: &mut [u8], _: ()) -> Result<usize, Self::Error> {
         let offset = &mut 0;
         let mut value = self.value;
         loop {
@@ -195,7 +195,7 @@ impl TryIntoCtx for Uleb128 {
             if value != 0 {
                 byte |= CONTINUATION_BIT;
             }
-            dst.gwrite(byte, offset)?;
+            dst.gwrite_with(byte, offset, scroll::LE)?;
             if value == 0 {
                 break;
             }
@@ -208,18 +208,18 @@ impl TryIntoCtx for Sleb128 {
     type Error = Error;
 
     #[inline]
-    fn try_into_ctx(self, dst: &mut [u8], _ctx: ()) -> Result<usize, Self::Error> {
+    fn try_into_ctx(self, dst: &mut [u8], _: ()) -> Result<usize, Self::Error> {
         let offset = &mut 0;
         let mut value = self.value;
         loop {
             let mut byte = (value as u8) & !CONTINUATION_BIT;
             value >>= 7;
             if (value == 0 && (byte & SIGN_BIT) == 0) || (value == -1 && (byte & SIGN_BIT) != 0) {
-                dst.gwrite(byte, offset)?;
+                dst.gwrite_with(byte, offset, scroll::LE)?;
                 break;
             } else {
                 byte |= CONTINUATION_BIT;
-                dst.gwrite(byte, offset)?;
+                dst.gwrite_with(byte, offset, scroll::LE)?;
             }
         }
         Ok(*offset)

@@ -137,7 +137,7 @@ impl<'a> TryFromCtx<'a> for EncodedValue {
     type Error = EncodedValueError;
     fn try_from_ctx(src: &'a [u8], _: ()) -> Result<(Self, usize), Self::Error> {
         let offset = &mut 0;
-        let header: ubyte = src.gread(offset)?;
+        let header: ubyte = src.gread_with(offset, scroll::LE)?;
         let value_arg = (header >> 5) as usize;
         let value_type = 0x1f & header;
         let value_type = ValueType::from_u8(value_type)
