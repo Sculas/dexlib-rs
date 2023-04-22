@@ -1,4 +1,4 @@
-- [ ] Implement low level data types
+- [x] Implement low level data types
   - [ ] Unit tests to ensure they are 1:1 with the spec
   - [ ] Implement [Dalvik bytecode](https://source.android.com/docs/core/runtime/dalvik-bytecode)
 - [ ] Implement high level API around data types
