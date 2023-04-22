@@ -7,6 +7,7 @@ pub mod code_item;
 pub mod encoded_value;
 pub mod flags;
 pub mod header;
+pub mod hiddenapi;
 pub mod map_list;
 pub mod method_handle;
 /// Simple, small types that don't need their own module.
