@@ -1,6 +1,11 @@
 use crate::{
     dex::{section::Error as SectionError, strings::StringReadError},
-    raw::{header::HeaderError, map_list::MapListError},
+    raw::{
+        annotations::AnnotationError,
+        class_data::ClassDataError,
+        header::HeaderError,
+        map_list::{ItemType, MapListError},
+    },
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -13,6 +18,14 @@ pub enum Error {
     StringRead(#[from] StringReadError),
     #[error("error reading from section: {0}")]
     Section(#[from] SectionError),
+    #[error("map list does not contain required item type: {0:?}")]
+    InvalidMapList(ItemType),
+    #[error("class index {0} out of bounds, classes count: {1}")]
+    ClassIndexOutOfBounds(usize, usize),
+    #[error("error reading class data: {0}")]
+    ClassData(#[from] ClassDataError),
+    #[error("error reading annotation: {0}")]
+    Annotation(#[from] AnnotationError),
     #[error("read error: {0}")]
     Scroll(#[from] scroll::Error),
 }

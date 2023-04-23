@@ -41,11 +41,10 @@ impl TryIntoCtx<scroll::Endian> for MapList {
 
 impl MapList {
     /// Returns the `MapItem` corresponding to the [`ItemType`].
-    pub fn get(&self, item_type: ItemType) -> Option<MapItem> {
+    pub fn get(&self, item_type: ItemType) -> Option<&MapItem> {
         self.0
             .iter()
             .find(|map_item| map_item.item_type == item_type)
-            .cloned()
     }
 
     /// Returns the offset of the item corresponding to the [`ItemType`].
@@ -90,11 +89,11 @@ pub enum ItemType {
 #[derive(Debug, Clone, Copy)]
 pub struct MapItem {
     /// Type of the current item.
-    item_type: ItemType,
+    pub item_type: ItemType,
     /// Count of the number of items to be found at the indicated offset.
-    size: uint,
+    pub size: uint,
     /// Offset from the start of the file to the current item type.
-    offset: uint,
+    pub offset: uint,
 }
 
 impl<'a> TryFromCtx<'a, scroll::Endian> for MapItem {

@@ -1,18 +1,15 @@
-use std::sync::Arc;
-
-use cesu8::{from_java_cesu8, to_java_cesu8, Cesu8DecodingError};
-use scroll::Pread;
-
+use super::section::Section;
 use crate::{
     raw::{
         header::Header,
         string::{StringData, StringId},
-        uint,
+        uint, RawTypeIndex,
     },
     utils::{nohash::BuildNoHashHasher, IntoArc},
 };
-
-use super::section::Section;
+use cesu8::{from_java_cesu8, to_java_cesu8, Cesu8DecodingError};
+use scroll::Pread;
+use std::sync::Arc;
 
 /// This is the same as [`StringId`]'s data offset, but it's a
 /// direct typedef to [`uint`] instead of a newtype struct.
@@ -38,20 +35,25 @@ pub struct Strings<'a> {
     src: &'a [u8],
     header: Header<'a>,
     // string id section
-    section: Section<'a>,
+    string_section: Section<'a>,
+    // type id section
+    type_section: Section<'a>,
     read_cache: dashmap::DashMap<RawStringId, DexString, BuildNoHashHasher<RawStringId>>,
-    // a list of custom strings that need to be written to the dex file
-    added_strings: Vec<Vec<u8>>,
 }
 
 impl<'a> Strings<'a> {
-    pub fn new(src: &'a [u8], header: Header<'a>, section: Section<'a>) -> Self {
+    pub fn new(
+        src: &'a [u8],
+        header: Header<'a>,
+        string_section: Section<'a>,
+        type_section: Section<'a>,
+    ) -> Self {
         Self {
             src,
             header,
-            section,
+            string_section,
+            type_section,
             read_cache: Default::default(),
-            added_strings: Vec::new(),
         }
     }
 
@@ -60,11 +62,11 @@ impl<'a> Strings<'a> {
         self.header.string_ids_size
     }
 
-    pub fn id_at(&self, index: uint) -> Result<StringId> {
+    pub fn id_at_idx(&self, index: uint) -> Result<StringId> {
         if index >= self.len() {
             return Err(StringReadError::IndexOutOfBounds(index));
         }
-        let id = self.section.index(index as usize, scroll::LE)?;
+        let id = self.string_section.index(index as usize, scroll::LE)?;
         Ok(id)
     }
 
@@ -87,22 +89,22 @@ impl<'a> Strings<'a> {
         }
     }
 
+    pub fn id_at_type_idx(&self, type_idx: RawTypeIndex) -> Result<StringId> {
+        let id: crate::raw::simple::TypeId =
+            self.type_section.index(type_idx as usize, scroll::LE)?;
+        self.id_at_idx(id.descriptor_idx)
+    }
+
     pub fn find(&self, query: &str) -> Result<StringId> {
         let element = to_java_cesu8(query);
         let index = self
-            .section
+            .string_section
             .binary_search(&element, scroll::LE, move |offset: &uint, element: _| {
                 let data: StringData = self.src.pread_with(*offset as usize, scroll::LE)?;
                 Ok::<_, StringReadError>((**element).cmp(data.data))
             })?
             .ok_or_else(|| StringReadError::StringNotFound)?;
-        self.id_at(index as uint)
-    }
-
-    // TODO: does this need to be parallelized?
-    #[allow(dead_code)] // TODO: remove
-    pub(crate) fn add(&mut self, string: String) {
-        self.added_strings.push(to_java_cesu8(&string).into_owned());
+        self.id_at_idx(index as uint)
     }
 }
 
@@ -112,7 +114,7 @@ mod tests {
     pub fn test() {
         let dex = crate::t::dex!();
         let sidx = dex.strings().len() / 2;
-        let sid_1 = dex.strings().id_at(sidx).unwrap();
+        let sid_1 = dex.strings().id_at_idx(sidx).unwrap();
         let str = dex.strings().get(&sid_1).unwrap();
         let sid_2 = dex.strings().find(&str).unwrap();
         assert_eq!(sid_1, sid_2);

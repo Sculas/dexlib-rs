@@ -7,6 +7,12 @@ use scroll::{
 #[derive(Debug)]
 pub struct TypeList(Vec<TypeItem>);
 
+impl TypeList {
+    pub(crate) fn into_inner(self) -> Vec<TypeItem> {
+        self.0
+    }
+}
+
 impl<'a> TryFromCtx<'a, scroll::Endian> for TypeList {
     type Error = scroll::Error;
     fn try_from_ctx(src: &'a [u8], ctx: scroll::Endian) -> Result<(Self, usize), Self::Error> {
@@ -30,5 +36,5 @@ impl TryIntoCtx<scroll::Endian> for TypeList {
 #[derive(Debug, Clone, Copy, Pread, Pwrite)]
 pub struct TypeItem {
     /// Index into the `type_ids` list.
-    type_idx: ushort,
+    pub type_idx: ushort,
 }

@@ -458,7 +458,6 @@ mod tests {
         annotation,
         EncodedValue::Annotation(EncodedAnnotation {
             type_idx: 256,
-            size: 0,
             elements: vec![]
         })
     );

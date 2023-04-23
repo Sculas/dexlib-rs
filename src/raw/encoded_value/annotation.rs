@@ -9,7 +9,6 @@ use super::{EncodedValue, EncodedValueError};
 #[derive(Debug, Clone, PartialEq)]
 pub struct EncodedAnnotation {
     pub type_idx: ulong,
-    pub size: ulong,
     pub elements: Vec<AnnotationElement>,
 }
 
@@ -23,7 +22,6 @@ impl<'a> TryFromCtx<'a> for EncodedAnnotation {
         Ok((
             Self {
                 type_idx,
-                size,
                 elements,
             },
             *offset,
@@ -36,7 +34,7 @@ impl TryIntoCtx for EncodedAnnotation {
     fn try_into_ctx(self, dst: &mut [u8], _: ()) -> Result<usize, Self::Error> {
         let offset = &mut 0;
         uleb128::write(dst, offset, self.type_idx)?;
-        uleb128::write(dst, offset, self.size)?;
+        uleb128::write(dst, offset, self.elements.len() as u64)?;
         try_gwrite_vec_with!(dst, offset, self.elements, ());
         Ok(*offset)
     }

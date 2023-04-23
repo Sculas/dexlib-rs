@@ -11,7 +11,7 @@ pub(crate) type Result<T> = std::result::Result<T, error::Error>;
 pub(crate) mod t {
     macro_rules! dex {
         () => {
-            crate::dex::DexFile::new(include_bytes!(concat!(
+            crate::dex::DexFile::open(include_bytes!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/tests/classes.dex"
             )))
