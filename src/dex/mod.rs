@@ -12,9 +12,11 @@ use strings::Strings;
 
 pub mod annotations;
 pub mod classes;
+pub mod fields;
 pub(crate) mod internal;
 pub(crate) mod section;
 pub mod strings;
+pub mod traits;
 #[macro_use]
 mod utils;
 

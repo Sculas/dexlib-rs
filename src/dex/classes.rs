@@ -1,37 +1,38 @@
-use once_cell::unsync::OnceCell;
-use scroll::Pread;
-
-use super::{annotations::Annotation, strings::DexString, DexFile};
+use super::{annotations::Annotation, fields::DexField, strings::DexString, traits, DexFile};
 use crate::{
     raw::{
         annotations::{AnnotationSetItem, AnnotationsDirectory},
         class_data::ClassData,
         classdef::ClassDef,
+        encoded_value::{EncodedArrayItem, EncodedValueError},
         flags::AccessFlags,
         string::StringId,
         type_list::TypeList,
-        NO_INDEX,
+        NO_INDEX, NO_OFFSET,
     },
-    utils::set::LazySet,
+    Result,
 };
+use once_cell::unsync::OnceCell;
+use scroll::Pread;
 
 pub mod iter;
 
 #[derive(derivative::Derivative)]
 #[derivative(Debug)]
-pub struct Class<'a> {
+pub struct DexClass<'a> {
     #[derivative(Debug = "ignore")]
     dex: &'a DexFile<'a>,
     def: ClassDef,
-    data: Option<ClassData>,
+    data: Option<ClassData>, // TODO: lazy load
 
     // internal
     descriptor_id: OnceCell<StringId>,
     annotations_dir: OnceCell<Option<AnnotationsDirectory>>,
+    static_values: OnceCell<Option<EncodedArrayItem>>,
 }
 
-impl<'a> Class<'a> {
-    pub fn new(dex: &'a DexFile<'a>, def: ClassDef) -> crate::Result<Self> {
+impl<'a> DexClass<'a> {
+    pub fn new(dex: &'a DexFile<'a>, def: ClassDef) -> Result<Self> {
         let data = if def.class_data_off > 0 {
             Some(dex.src.pread(def.class_data_off as usize)?)
         } else {
@@ -45,17 +46,20 @@ impl<'a> Class<'a> {
             // internal
             descriptor_id: OnceCell::new(),
             annotations_dir: OnceCell::new(),
+            static_values: OnceCell::new(),
         })
     }
+}
 
-    pub fn descriptor(&self) -> crate::Result<DexString> {
+impl<'a> traits::Class for DexClass<'a> {
+    fn descriptor(&self) -> Result<DexString> {
         let id = self
             .descriptor_id
             .get_or_try_init(|| self.dex.strings().id_at_type_idx(self.def.class_idx))?;
         Ok(self.dex.strings().get(id)?)
     }
 
-    pub fn superclass(&self) -> crate::Result<Option<DexString>> {
+    fn superclass(&self) -> Result<Option<DexString>> {
         if self.def.superclass_idx == NO_INDEX {
             return Ok(None);
         }
@@ -63,11 +67,11 @@ impl<'a> Class<'a> {
         Ok(Some(self.dex.strings().get(&id)?))
     }
 
-    pub fn access_flags(&self) -> &AccessFlags {
+    fn access_flags(&self) -> &AccessFlags {
         &self.def.access_flags
     }
 
-    pub fn source_file(&self) -> crate::Result<Option<DexString>> {
+    fn source_file(&self) -> Result<Option<DexString>> {
         if self.def.source_file_idx == NO_INDEX {
             return Ok(None);
         }
@@ -75,51 +79,117 @@ impl<'a> Class<'a> {
         Ok(Some(self.dex.strings().get(&id)?))
     }
 
-    pub fn interfaces(&self) -> crate::Result<LazySet<crate::Result<DexString>>> {
+    fn interfaces(&self) -> Result<Vec<DexString>> {
+        let mut interfaces = Vec::new();
         if self.def.interfaces_off == 0 {
-            return Ok(LazySet::empty());
+            return Ok(interfaces);
         }
         let ty_list = self
             .dex
             .src
             .pread_with::<TypeList>(self.def.interfaces_off as usize, scroll::LE)?
             .into_inner();
-        let strings = self.dex.strings();
-        let interfaces = LazySet::new(ty_list.len(), move |idx| {
-            let id = strings.id_at_type_idx(ty_list[idx].type_idx as u32)?;
-            Ok(strings.get(&id)?)
-        });
+        interfaces.reserve(ty_list.len());
+        for ty in ty_list {
+            let id = self.dex.strings().id_at_type_idx(ty.type_idx as u32)?;
+            interfaces.push(self.dex.strings().get(&id)?);
+        }
         Ok(interfaces)
     }
 
-    pub fn annotations(&self) -> crate::Result<LazySet<crate::Result<Annotation>>> {
+    fn annotations(&self) -> Result<Vec<Annotation>> {
+        let mut annotations = Vec::new();
         let offset = match self.annotations_dir()? {
-            Some(dir) if dir.class_annotations_off != 0 => dir.class_annotations_off,
-            _ => return Ok(LazySet::empty()),
+            Some(dir) if dir.class_annotations_off != NO_OFFSET => dir.class_annotations_off,
+            _ => return Ok(annotations),
         };
-        let set = self
+        let offsets = self
             .dex
             .src
             .pread_with::<AnnotationSetItem>(offset as usize, scroll::LE)?
             .into_inner();
-        let annotations = LazySet::new(set.len(), move |idx| {
-            let annotation = self.dex.src.pread_with(set[idx] as usize, scroll::LE)?;
-            Ok(Annotation::new(self.dex, annotation))
-        });
+        annotations.reserve(offsets.len());
+        for offset in offsets {
+            let raw = self.dex.src.pread_with(offset as usize, scroll::LE)?;
+            annotations.push(Annotation::new(self.dex, raw));
+        }
         Ok(annotations)
     }
+
+    fn static_fields(&self) -> Result<Vec<DexField<'a>>> {
+        let mut fields = Vec::new();
+        let efs = match &self.data {
+            Some(data) => &data.static_fields,
+            _ => return Ok(Vec::new()),
+        };
+        let mut static_values = self.static_values()?.map(|v| v.iter());
+        let annotations_dir = self.annotations_dir()?;
+        let mut prev_idx = 0;
+        for ef in efs {
+            let initial_value = match static_values {
+                Some(ref mut values) => values.next(),
+                _ => None,
+            };
+            let field = DexField::new(
+                self.dex,
+                self,
+                ef,
+                prev_idx,
+                initial_value.cloned(),
+                annotations_dir,
+            )?;
+            prev_idx = field.idx;
+            fields.push(field);
+        }
+        Ok(fields) // FIXME: weirdest lifetime issue ever
+    }
+
+    fn instance_fields(&self) -> Result<Vec<DexField<'a>>> {
+        todo!()
+    }
+
+    fn fields(&self) -> Result<Vec<DexField<'a>>> {
+        todo!()
+    }
+
+    // fn direct_methods(&self) -> Result<Vec<impl traits::Method>> {
+    //     todo!()
+    // }
+
+    // fn virtual_methods(&self) -> Result<Vec<impl traits::Method>> {
+    //     todo!()
+    // }
+
+    // fn methods(&self) -> Result<Vec<impl traits::Method>> {
+    //     todo!()
+    // }
 }
 
-impl<'a> Class<'a> {
-    fn annotations_dir(&self) -> crate::Result<Option<&AnnotationsDirectory>> {
+impl<'a> DexClass<'a> {
+    fn annotations_dir(&self) -> Result<Option<&AnnotationsDirectory>> {
         Ok(self
             .annotations_dir
             .get_or_try_init(|| {
-                let offset = self.def.annotations_off as usize;
-                if offset == 0 {
+                if self.def.annotations_off == NO_OFFSET {
                     return Ok::<_, scroll::Error>(None);
                 }
-                Ok(Some(self.dex.src.pread_with(offset, scroll::LE)?))
+                Ok(Some(self.dex.src.pread_with(
+                    self.def.annotations_off as usize,
+                    scroll::LE,
+                )?))
+            })?
+            .as_ref())
+    }
+
+    fn static_values(&self) -> Result<Option<&EncodedArrayItem>> {
+        Ok(self
+            .static_values
+            .get_or_try_init(|| {
+                if self.def.static_values_off == NO_OFFSET {
+                    return Ok::<_, EncodedValueError>(None);
+                }
+                let item = self.dex.src.pread(self.def.static_values_off as usize)?;
+                Ok(Some(item))
             })?
             .as_ref())
     }
@@ -127,19 +197,16 @@ impl<'a> Class<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::traits::Class;
+
     #[test]
     fn annotations() {
         let dex = crate::t::dex!();
         for class in dex.classes() {
             let class = class.unwrap();
-            let annotations = class
-                .annotations()
-                .unwrap()
-                .into_iter()
-                .map(|x| x.unwrap())
-                .collect::<Vec<_>>();
-            if !annotations.is_empty() {
-                println!("class {} => {annotations:?}", class.descriptor().unwrap());
+            let fields = class.static_fields().unwrap();
+            if !fields.is_empty() {
+                println!("class {} => {fields:?}", class.descriptor().unwrap());
             }
         }
     }

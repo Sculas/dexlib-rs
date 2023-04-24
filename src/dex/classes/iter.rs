@@ -1,4 +1,4 @@
-use super::Class;
+use super::DexClass;
 use crate::dex::DexFile;
 
 pub struct ClassIterator<'a> {
@@ -22,7 +22,7 @@ impl<'a> ClassIterator<'a> {
 }
 
 impl<'a> Iterator for ClassIterator<'a> {
-    type Item = crate::Result<Class<'a>>;
+    type Item = crate::Result<DexClass<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.count {
@@ -32,7 +32,7 @@ impl<'a> Iterator for ClassIterator<'a> {
             Ok(class_def) => class_def,
             Err(err) => return Some(Err(err)),
         };
-        let class = match Class::new(self.dex, class_def) {
+        let class = match DexClass::new(self.dex, class_def) {
             Ok(class) => class,
             Err(err) => return Some(Err(err)),
         };

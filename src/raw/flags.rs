@@ -33,12 +33,12 @@ bitflags::bitflags! {
 }
 
 impl AccessFlags {
-    pub fn try_from_uleb128(src: &[u8], offset: &mut usize) -> Result<Self, scroll::Error> {
+    pub(crate) fn try_from_uleb128(src: &[u8], offset: &mut usize) -> Result<Self, scroll::Error> {
         let flags = uleb128::read(src, offset)?;
         Ok(AccessFlags::from_bits_truncate(flags as u32))
     }
 
-    pub fn try_into_uleb128(
+    pub(crate) fn try_into_uleb128(
         &self,
         dst: &mut [u8],
         offset: &mut usize,

@@ -3,6 +3,7 @@ use crate::{
     raw::{
         annotations::AnnotationError,
         class_data::ClassDataError,
+        encoded_value::EncodedValueError,
         header::HeaderError,
         map_list::{ItemType, MapListError},
     },
@@ -26,6 +27,8 @@ pub enum Error {
     ClassData(#[from] ClassDataError),
     #[error("error reading annotation: {0}")]
     Annotation(#[from] AnnotationError),
+    #[error("error reading encoded value: {0}")]
+    EncodedValue(#[from] EncodedValueError),
     #[error("read error: {0}")]
     Scroll(#[from] scroll::Error),
 }

@@ -1,5 +1,4 @@
 pub mod leb128;
-pub mod set;
 pub(crate) mod nohash;
 
 macro_rules! try_gread_vec_with {

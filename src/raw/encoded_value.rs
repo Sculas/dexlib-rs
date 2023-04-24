@@ -374,6 +374,14 @@ impl EncodedArray {
     }
 }
 
+impl std::ops::Deref for EncodedArray {
+    type Target = Vec<EncodedValue>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl<'a> TryFromCtx<'a> for EncodedArray {
     type Error = EncodedValueError;
     fn try_from_ctx(src: &'a [u8], _: ()) -> Result<(Self, usize), Self::Error> {
@@ -395,32 +403,7 @@ impl TryIntoCtx for EncodedArray {
 }
 
 /// An [`EncodedArray`] written as a single item.
-#[derive(Debug, Default)]
-pub struct EncodedArrayItem(EncodedArray);
-
-impl EncodedArrayItem {
-    pub(crate) fn into_inner(self) -> EncodedArray {
-        self.0
-    }
-}
-
-impl<'a> TryFromCtx<'a> for EncodedArrayItem {
-    type Error = EncodedValueError;
-    fn try_from_ctx(src: &'a [u8], _: ()) -> Result<(Self, usize), Self::Error> {
-        let offset = &mut 0;
-        let inner = src.gread(offset)?;
-        Ok((Self(inner), *offset))
-    }
-}
-
-impl TryIntoCtx for EncodedArrayItem {
-    type Error = EncodedValueError;
-    fn try_into_ctx(self, dst: &mut [u8], _: ()) -> Result<usize, Self::Error> {
-        let offset = &mut 0;
-        dst.gwrite(self.0, offset)?;
-        Ok(*offset)
-    }
-}
+pub type EncodedArrayItem = EncodedArray;
 
 #[cfg(test)]
 mod tests {

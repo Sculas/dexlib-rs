@@ -1,9 +1,8 @@
+use super::{strings::DexString, DexFile};
 use crate::raw::{
     annotations::{Annotation as RawAnnotation, Visibility},
     encoded_value::EncodedAnnotation,
 };
-
-use super::{strings::DexString, DexFile};
 
 #[derive(derivative::Derivative)]
 #[derivative(Debug)]
