@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use super::{annotations::Annotation, fields::DexField, strings::DexString, traits, DexFile};
+use super::{
+    annotations::Annotation, fields::DexField, methods::DexMethod, strings::DexString, traits,
+    DexFile,
+};
 use crate::{
     raw::{
         annotations::{AnnotationSetItem, AnnotationsDirectory},
-        class_data::ClassData,
+        class_data::{ClassData, EncodedMethod},
         classdef::ClassDef,
         encoded_value::{EncodedArrayItem, EncodedValueError},
         flags::AccessFlags,
@@ -170,17 +173,26 @@ impl<'a> traits::Class for DexClass<'a> {
         Ok(fields)
     }
 
-    // fn direct_methods(&self) -> Result<Vec<impl traits::Method>> {
-    //     todo!()
-    // }
+    fn direct_methods(&self) -> Result<Vec<DexMethod<'a>>> {
+        self.parse_methods(match &self.data {
+            Some(data) => &data.direct_methods,
+            _ => return Ok(Vec::new()),
+        })
+    }
 
-    // fn virtual_methods(&self) -> Result<Vec<impl traits::Method>> {
-    //     todo!()
-    // }
+    fn virtual_methods(&self) -> Result<Vec<DexMethod<'a>>> {
+        self.parse_methods(match &self.data {
+            Some(data) => &data.virtual_methods,
+            _ => return Ok(Vec::new()),
+        })
+    }
 
-    // fn methods(&self) -> Result<Vec<impl traits::Method>> {
-    //     todo!()
-    // }
+    fn methods(&self) -> Result<Vec<DexMethod<'a>>> {
+        let mut methods = Vec::new();
+        methods.extend(self.direct_methods()?);
+        methods.extend(self.virtual_methods()?);
+        Ok(methods)
+    }
 }
 
 impl<'a> DexClass<'a> {
@@ -212,29 +224,16 @@ impl<'a> DexClass<'a> {
             })?
             .as_ref())
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::traits::{Class, Field};
-
-    #[test]
-    fn annotations() {
-        let dex = crate::t::dex!();
-        let mut i = 0;
-        for class in dex.classes() {
-            let class = class.unwrap();
-            let fields = class.static_fields().unwrap();
-            if !fields.is_empty()
-                && fields.len() < 5
-                && fields.iter().any(|f| f.initial_value().is_some())
-            {
-                println!("class {} => {fields:#?}", class.descriptor().unwrap());
-                i += 1;
-            }
-            if i > 5 {
-                break;
-            }
+    fn parse_methods(&self, raw_methods: &[EncodedMethod]) -> Result<Vec<DexMethod<'a>>> {
+        let mut methods = Vec::new();
+        let annotations_dir = self.annotations_dir()?;
+        let mut prev_idx = 0;
+        for raw in raw_methods {
+            let method = DexMethod::new(self.dex, self, raw, prev_idx, annotations_dir.clone())?;
+            prev_idx = method.idx;
+            methods.push(method);
         }
+        Ok(methods)
     }
 }

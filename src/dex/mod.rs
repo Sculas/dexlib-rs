@@ -14,6 +14,7 @@ pub mod annotations;
 pub mod classes;
 pub mod fields;
 pub(crate) mod internal;
+pub mod methods;
 pub(crate) mod section;
 pub mod strings;
 pub mod traits;
