@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::{
     annotations::Annotation,
     classes::DexClass,
@@ -24,7 +26,7 @@ pub struct DexField<'a> {
     defining_class: DexString,
     access_flags: AccessFlags,
     initial_value: Option<EncodedValue>,
-    annotations_dir: Option<&'a AnnotationsDirectory>,
+    annotations_dir: Option<Arc<AnnotationsDirectory>>,
 }
 
 impl<'a> DexField<'a> {
@@ -34,7 +36,7 @@ impl<'a> DexField<'a> {
         raw: &EncodedField,
         prev_idx: usize,
         initial_value: Option<EncodedValue>,
-        annotations_dir: Option<&'a AnnotationsDirectory>,
+        annotations_dir: Option<Arc<AnnotationsDirectory>>,
     ) -> Result<Self> {
         let idx = raw.field_idx_diff as usize + prev_idx;
         let fid = dex.field_ids_section().index(idx, scroll::LE)?;
@@ -72,13 +74,13 @@ impl<'a> traits::Field for DexField<'a> {
         &self.access_flags
     }
 
-    fn initial_value(&self) -> Result<Option<EncodedValue>> {
-        todo!()
+    fn initial_value(&self) -> Option<&EncodedValue> {
+        self.initial_value.as_ref()
     }
 
     fn annotations(&self) -> Result<Vec<Annotation>> {
         let mut annotations = Vec::new();
-        let fas = match self.annotations_dir {
+        let fas = match &self.annotations_dir {
             Some(dir) => &dir.field_annotations,
             _ => return Ok(Vec::new()),
         };

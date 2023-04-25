@@ -19,13 +19,7 @@ impl<'a> TryFromCtx<'a> for EncodedAnnotation {
         let type_idx = uleb128::read(src, offset)?;
         let size = uleb128::read(src, offset)?;
         let elements = try_gread_vec_with!(src, offset, size, ());
-        Ok((
-            Self {
-                type_idx,
-                elements,
-            },
-            *offset,
-        ))
+        Ok((Self { type_idx, elements }, *offset))
     }
 }
 

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::{annotations::Annotation, fields::DexField, strings::DexString, traits, DexFile};
 use crate::{
     raw::{
@@ -10,6 +12,7 @@ use crate::{
         type_list::TypeList,
         NO_INDEX, NO_OFFSET,
     },
+    utils::IntoArc,
     Result,
 };
 use once_cell::unsync::OnceCell;
@@ -27,7 +30,7 @@ pub struct DexClass<'a> {
 
     // internal
     descriptor_id: OnceCell<StringId>,
-    annotations_dir: OnceCell<Option<AnnotationsDirectory>>,
+    annotations_dir: OnceCell<Option<Arc<AnnotationsDirectory>>>,
     static_values: OnceCell<Option<EncodedArrayItem>>,
 }
 
@@ -136,20 +139,35 @@ impl<'a> traits::Class for DexClass<'a> {
                 ef,
                 prev_idx,
                 initial_value.cloned(),
-                annotations_dir,
+                annotations_dir.clone(),
             )?;
             prev_idx = field.idx;
             fields.push(field);
         }
-        Ok(fields) // FIXME: weirdest lifetime issue ever
+        Ok(fields)
     }
 
     fn instance_fields(&self) -> Result<Vec<DexField<'a>>> {
-        todo!()
+        let mut fields = Vec::new();
+        let efs = match &self.data {
+            Some(data) => &data.instance_fields,
+            _ => return Ok(Vec::new()),
+        };
+        let annotations_dir = self.annotations_dir()?;
+        let mut prev_idx = 0;
+        for ef in efs {
+            let field = DexField::new(self.dex, self, ef, prev_idx, None, annotations_dir.clone())?;
+            prev_idx = field.idx;
+            fields.push(field);
+        }
+        Ok(fields)
     }
 
     fn fields(&self) -> Result<Vec<DexField<'a>>> {
-        todo!()
+        let mut fields = Vec::new();
+        fields.extend(self.static_fields()?);
+        fields.extend(self.instance_fields()?);
+        Ok(fields)
     }
 
     // fn direct_methods(&self) -> Result<Vec<impl traits::Method>> {
@@ -166,19 +184,20 @@ impl<'a> traits::Class for DexClass<'a> {
 }
 
 impl<'a> DexClass<'a> {
-    fn annotations_dir(&self) -> Result<Option<&AnnotationsDirectory>> {
+    fn annotations_dir(&self) -> Result<Option<Arc<AnnotationsDirectory>>> {
         Ok(self
             .annotations_dir
             .get_or_try_init(|| {
                 if self.def.annotations_off == NO_OFFSET {
                     return Ok::<_, scroll::Error>(None);
                 }
-                Ok(Some(self.dex.src.pread_with(
-                    self.def.annotations_off as usize,
-                    scroll::LE,
-                )?))
+                let dir: AnnotationsDirectory = self
+                    .dex
+                    .src
+                    .pread_with(self.def.annotations_off as usize, scroll::LE)?;
+                Ok(Some(dir.into_arc()))
             })?
-            .as_ref())
+            .clone())
     }
 
     fn static_values(&self) -> Result<Option<&EncodedArrayItem>> {
@@ -197,16 +216,24 @@ impl<'a> DexClass<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::traits::Class;
+    use super::traits::{Class, Field};
 
     #[test]
     fn annotations() {
         let dex = crate::t::dex!();
+        let mut i = 0;
         for class in dex.classes() {
             let class = class.unwrap();
             let fields = class.static_fields().unwrap();
-            if !fields.is_empty() {
-                println!("class {} => {fields:?}", class.descriptor().unwrap());
+            if !fields.is_empty()
+                && fields.len() < 5
+                && fields.iter().any(|f| f.initial_value().is_some())
+            {
+                println!("class {} => {fields:#?}", class.descriptor().unwrap());
+                i += 1;
+            }
+            if i > 5 {
+                break;
             }
         }
     }

@@ -24,7 +24,7 @@ pub trait Field {
     fn name(&self) -> Result<DexString>;
     fn descriptor(&self) -> Result<DexString>;
     fn access_flags(&self) -> &AccessFlags;
-    fn initial_value(&self) -> Result<Option<EncodedValue>>; // TODO: use high level EncodedValue
+    fn initial_value(&self) -> Option<&EncodedValue>; // TODO: use high level EncodedValue
     fn annotations(&self) -> Result<impl IntoIterator<Item = Annotation>>;
     // TODO: hidden api restrictions
 }
