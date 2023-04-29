@@ -47,7 +47,7 @@ impl<'a> TryFromCtx<'a> for EncodedCatchHandler {
         let offset = &mut 0;
         let size = sleb128::read(src, offset)?;
         let handlers = try_gread_vec_with!(src, offset, size.abs(), ());
-        let catch_all_addr = if size < 0 {
+        let catch_all_addr = if size <= 0 {
             Some(uleb128::read(src, offset)?)
         } else {
             None
