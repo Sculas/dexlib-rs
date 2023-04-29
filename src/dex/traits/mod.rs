@@ -38,7 +38,6 @@ pub trait Method {
     fn annotations(&self) -> Result<impl IntoIterator<Item = Annotation>>;
     fn implementation(&self) -> Result<&impl MethodImplementation>;
     // TODO: hidden api restrictions
-    // TODO: method implementation
 }
 
 pub trait MethodParameter {
