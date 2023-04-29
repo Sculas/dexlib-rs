@@ -1,21 +1,26 @@
 use std::sync::Arc;
 
+use self::code::DexMethodImplementation;
+
 use super::{
     annotations::Annotation,
     classes::DexClass,
     strings::DexString,
-    traits::{self, Class},
+    traits::{self, Class, MethodImplementation},
     DexFile,
 };
 use crate::{
     raw::{
         annotations::AnnotationsDirectory,
         class_data::EncodedMethod,
+        encoded_value::EncodedValue,
         flags::AccessFlags,
         simple::{MethodId, ProtoId},
+        type_list::TypeList,
     },
     Result,
 };
+use once_cell::unsync::OnceCell;
 use scroll::Pread;
 
 pub mod code;
@@ -31,6 +36,8 @@ pub struct DexMethod<'a> {
     defining_class: DexString,
     access_flags: AccessFlags,
     annotations_dir: Option<Arc<AnnotationsDirectory>>,
+    code_offset: u64,
+    implementation: OnceCell<DexMethodImplementation<'a>>,
 }
 
 impl<'a> DexMethod<'a> {
@@ -52,6 +59,8 @@ impl<'a> DexMethod<'a> {
             defining_class: class.descriptor()?,
             access_flags: raw.access_flags,
             annotations_dir,
+            code_offset: raw.code_off,
+            implementation: OnceCell::new(),
         })
     }
 }
@@ -67,7 +76,26 @@ impl<'a> traits::Method for DexMethod<'a> {
     }
 
     fn parameters(&self) -> Result<Vec<DexMethodParameter<'a>>> {
-        todo!("requires debug info in code item")
+        let mut params = Vec::new();
+        let debug_info = self.implementation()?.debug_info()?;
+        let param_info = self
+            .dex
+            .src
+            .pread_with::<TypeList>(self.pid.parameters_off as usize, scroll::LE)?
+            .into_inner()
+            .into_iter()
+            .zip(debug_info.parameter_names.iter());
+        for (ty, name) in param_info {
+            let param = DexMethodParameter::new(
+                self.dex,
+                self.idx,
+                name.clone(),
+                ty.type_idx as u32,
+                self.annotations_dir.clone(),
+            );
+            params.push(param);
+        }
+        Ok(params)
     }
 
     fn return_type(&self) -> Result<DexString> {
@@ -100,6 +128,14 @@ impl<'a> traits::Method for DexMethod<'a> {
         }
         Ok(annotations)
     }
+
+    fn implementation(&self) -> Result<&DexMethodImplementation<'a>> {
+        Ok(self.implementation.get_or_try_init(|| {
+            let offset = self.code_offset as usize;
+            let raw = self.dex.src.pread_with(offset, scroll::LE)?;
+            Ok::<_, scroll::Error>(DexMethodImplementation::new(self.dex, self.idx, raw))
+        })?)
+    }
 }
 
 #[derive(derivative::Derivative)]
@@ -108,7 +144,7 @@ pub struct DexMethodParameter<'a> {
     #[derivative(Debug = "ignore")]
     dex: &'a DexFile<'a>,
     midx: usize,
-    name_idx: Option<u32>,
+    name_idx: Option<u64>,
     type_idx: u32,
     annotations_dir: Option<Arc<AnnotationsDirectory>>,
 }
@@ -117,7 +153,7 @@ impl<'a> DexMethodParameter<'a> {
     pub fn new(
         dex: &'a DexFile<'a>,
         midx: usize,
-        name_idx: Option<u32>,
+        name_idx: Option<u64>,
         type_idx: u32,
         annotations_dir: Option<Arc<AnnotationsDirectory>>,
     ) -> Self {
@@ -135,7 +171,7 @@ impl<'a> traits::MethodParameter for DexMethodParameter<'a> {
     fn name(&self) -> Result<Option<DexString>> {
         match self.name_idx {
             Some(idx) => {
-                let id = self.dex.strings().id_at_idx(idx)?;
+                let id = self.dex.strings().id_at_idx(idx as u32)?;
                 Ok(Some(self.dex.strings().get(&id)?))
             }
             _ => Ok(None),
@@ -166,7 +202,29 @@ impl<'a> traits::MethodParameter for DexMethodParameter<'a> {
         Ok(annotations)
     }
 
-    fn signature(&self) -> Option<DexString> {
-        todo!()
+    fn signature(&self) -> Result<Option<String>> {
+        let annotations: Vec<Annotation> = self.annotations()?;
+        for a in annotations {
+            if *a.descriptor()? != "Ldalvik/annotation/Signature;" {
+                continue;
+            }
+            for el in a.elements() {
+                if *el.name()? != "value" {
+                    continue;
+                }
+                if let EncodedValue::Array(v) = el.value() {
+                    let mut sig = String::new();
+                    for el in v {
+                        if let EncodedValue::String(idx) = el {
+                            let sidx = self.dex.strings().id_at_idx(*idx)?;
+                            let str = self.dex.strings().get(&sidx)?;
+                            sig.push_str(&str);
+                        }
+                    }
+                    return Ok(Some(sig));
+                }
+            }
+        }
+        Ok(None)
     }
 }

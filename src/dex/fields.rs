@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::{
     annotations::Annotation,
     classes::DexClass,
@@ -15,6 +13,7 @@ use crate::{
     Result,
 };
 use scroll::Pread;
+use std::sync::Arc;
 
 #[derive(derivative::Derivative)]
 #[derivative(Debug)]

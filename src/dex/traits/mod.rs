@@ -1,6 +1,6 @@
 use super::{annotations::Annotation, strings::DexString};
 use crate::{
-    raw::{encoded_value::EncodedValue, flags::AccessFlags},
+    raw::{code_item::DebugInfoItem, encoded_value::EncodedValue, flags::AccessFlags},
     Result,
 };
 
@@ -36,6 +36,7 @@ pub trait Method {
     fn return_type(&self) -> Result<DexString>;
     fn access_flags(&self) -> &AccessFlags;
     fn annotations(&self) -> Result<impl IntoIterator<Item = Annotation>>;
+    fn implementation(&self) -> Result<&impl MethodImplementation>;
     // TODO: hidden api restrictions
     // TODO: method implementation
 }
@@ -44,12 +45,12 @@ pub trait MethodParameter {
     fn name(&self) -> Result<Option<DexString>>;
     fn descriptor(&self) -> Result<DexString>;
     fn annotations(&self) -> Result<impl IntoIterator<Item = Annotation>>;
-    fn signature(&self) -> Option<DexString>;
+    fn signature(&self) -> Result<Option<String>>;
 }
 
 pub trait MethodImplementation {
     fn registers(&self) -> u16;
     fn instructions(&self) -> Result<impl IntoIterator<Item = u16>>;
     fn try_blocks(&self) -> Result<impl IntoIterator<Item = Annotation>>;
-    fn debug_items(&self) -> Option<DexString>;
+    fn debug_info(&self) -> Result<DebugInfoItem>; // TODO: use high level DebugInfo
 }

@@ -1,3 +1,4 @@
+// FIXME: Stable support => https://stackoverflow.com/a/43174171
 #![allow(incomplete_features)]
 #![feature(return_position_impl_trait_in_trait)]
 
