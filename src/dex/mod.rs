@@ -1,10 +1,23 @@
 use scroll::Pread;
 
-use crate::raw::{header::Header, map_list::MapList, tysize};
+use crate::{
+    error::Error,
+    raw::{
+        header::Header,
+        map_list::{ItemType, MapList},
+        tysize,
+    },
+};
 use strings::Strings;
 
+pub mod annotations;
+pub mod classes;
+pub mod fields;
+pub(crate) mod internal;
+pub mod methods;
 pub(crate) mod section;
 pub mod strings;
+pub mod traits;
 #[macro_use]
 mod utils;
 
@@ -13,32 +26,48 @@ pub struct DexFile<'a> {
     header: Header<'a>,
     map_list: MapList,
     strings: Strings<'a>,
+
+    // internal
+    classdef_info: utils::OffsetInfo,
 }
 
 impl<'a> DexFile<'a> {
-    pub fn new(src: &'a [u8]) -> crate::Result<Self> {
+    pub fn open(src: &'a [u8]) -> crate::Result<Self> {
         let header: Header = src.pread_with(0, scroll::LE)?;
         let map_list: MapList = src.pread_with(header.map_off as usize, scroll::LE)?;
         let strings = Strings::new(
             src,
             /* shallow clone */ header.clone(),
-            raw_string_ids_section(src, &header)?,
+            raw_string_ids_section(src, &header),
+            raw_type_ids_section(src, &header),
         );
         Ok(Self {
             src,
             header,
-            map_list,
             strings,
+
+            // internal
+            classdef_info: get_offset_info!(map_list, ItemType::ClassDefItem),
+
+            // map_list last to prevent move errors
+            map_list,
         })
     }
+
     pub fn header(&self) -> &Header {
         &self.header
     }
+
     pub fn map_list(&self) -> &MapList {
         &self.map_list
     }
+
     pub fn strings(&self) -> &Strings {
         &self.strings
+    }
+
+    pub fn classes(&self) -> classes::iter::ClassIterator {
+        classes::iter::ClassIterator::new(self, self.classdef_info.size)
     }
 }
 

@@ -14,14 +14,6 @@ pub enum ClassDataError {
 
 #[derive(Debug)]
 pub struct ClassData {
-    /// The number of static fields defined in this item.
-    pub static_fields_size: ulong,
-    /// The number of instance fields defined in this item.
-    pub instance_fields_size: ulong,
-    /// The number of direct methods defined in this item.
-    pub direct_methods_size: ulong,
-    /// The number of virtual methods defined in this item.
-    pub virtual_methods_size: ulong,
     /// The defined static fields, represented as a sequence of encoded elements.
     /// The fields must be sorted by `field_idx` in increasing order.
     pub static_fields: Vec<EncodedField>,
@@ -52,10 +44,6 @@ impl<'a> TryFromCtx<'a> for ClassData {
         let virtual_methods = try_gread_vec_with!(src, offset, virtual_methods_size, ());
         Ok((
             Self {
-                static_fields_size,
-                instance_fields_size,
-                direct_methods_size,
-                virtual_methods_size,
                 static_fields,
                 instance_fields,
                 direct_methods,
@@ -70,10 +58,10 @@ impl TryIntoCtx for ClassData {
     type Error = ClassDataError;
     fn try_into_ctx(self, dst: &mut [u8], _: ()) -> Result<usize, Self::Error> {
         let offset = &mut 0;
-        uleb128::write(dst, offset, self.static_fields_size)?;
-        uleb128::write(dst, offset, self.instance_fields_size)?;
-        uleb128::write(dst, offset, self.direct_methods_size)?;
-        uleb128::write(dst, offset, self.virtual_methods_size)?;
+        uleb128::write(dst, offset, self.static_fields.len() as ulong)?;
+        uleb128::write(dst, offset, self.instance_fields.len() as ulong)?;
+        uleb128::write(dst, offset, self.direct_methods.len() as ulong)?;
+        uleb128::write(dst, offset, self.virtual_methods.len() as ulong)?;
         try_gwrite_vec_with!(dst, offset, self.static_fields, ());
         try_gwrite_vec_with!(dst, offset, self.instance_fields, ());
         try_gwrite_vec_with!(dst, offset, self.direct_methods, ());

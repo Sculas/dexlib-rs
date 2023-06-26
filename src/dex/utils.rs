@@ -1,15 +1,15 @@
 macro_rules! section {
     ($struct:ident, $iden:ident, $size:stmt) => {
         paste::paste! {
-          fn [<raw_ $iden _section>]<'a>(src: &'a [u8], header: &Header<'a>) -> Result<section::Section<'a>, section::Error> {
+          fn [<raw_ $iden _section>]<'a>(src: &'a [u8], header: &Header<'a>) -> section::Section<'a> {
               let start = header.[<$iden _off>] as usize;
               let end = start + header.[<$iden _size>] as usize * $size;
-              Ok(section::Section::new(&src[start..end], $size))
+              section::Section::new(&src[start..end], $size)
           }
         }
         impl<'a> $struct<'a> {
             paste::paste! {
-                pub fn [<$iden _section>](&self) -> Result<section::Section, section::Error> {
+                pub fn [<$iden _section>](&self) -> section::Section {
                     [<raw_ $iden _section>](self.src, &self.header)
                 }
             }
@@ -35,4 +35,21 @@ macro_rules! section {
             }
         }
     };
+}
+
+macro_rules! get_offset_info {
+    ($map_list:ident, $item_type:expr) => {{
+        let item = $map_list
+            .get($item_type)
+            .ok_or_else(|| Error::InvalidMapList($item_type))?;
+        utils::OffsetInfo {
+            size: item.size as usize,
+            offset: item.offset as usize,
+        }
+    }};
+}
+
+pub struct OffsetInfo {
+    pub size: usize,
+    pub offset: usize,
 }

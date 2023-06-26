@@ -62,9 +62,18 @@ impl TryIntoCtx<scroll::Endian> for Annotation {
 
 #[derive(Debug, Clone)]
 pub struct AnnotationsDirectory {
+    /// Offset from the start of the file to the annotations made directly on the class, or 0 if the class has no direct annotations.
+    /// The offset, if non-zero, should be to a location in the data section.
+    /// The format of the data is specified by `annotation_set_item`.
     pub class_annotations_off: uint,
+    /// List of associated field annotations.
+    /// The elements of the list must be sorted in increasing order, by `field_idx`.
     pub field_annotations: Vec<FieldAnnotation>,
+    /// List of associated method annotations.
+    /// The elements of the list must be sorted in increasing order, by `method_idx`.
     pub method_annotations: Vec<MethodAnnotation>,
+    /// List of associated method parameter annotations.
+    /// The elements of the list must be sorted in increasing order, by `method_idx`.
     pub parameter_annotations: Vec<ParameterAnnotation>,
 }
 

@@ -33,6 +33,7 @@ pub(crate) type sleb128 = crate::utils::leb128::Sleb128;
 pub(crate) type uleb128 = crate::utils::leb128::Uleb128;
 
 pub(crate) const NO_INDEX: uint = 0xffffffff;
+pub(crate) const NO_OFFSET: uint = 0;
 pub(crate) const RESERVED_VALUE: usize = 0;
 
 pub(crate) type RawStringIndex = uint;

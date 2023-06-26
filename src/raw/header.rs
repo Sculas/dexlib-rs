@@ -107,7 +107,7 @@ pub struct Header<'a> {
     /// or 0 if `class_defs_size == 0` (admittedly a strange edge case).
     /// The offset, if non-zero, should be to the start of the `class_defs` section.
     ///
-    /// TODO: Implement this.
+    /// Implemented as [`ClassDef`][super::classdef::ClassDef].
     pub class_defs_off: uint,
     /// Size of `data` section in bytes. Must be an even multiple of [`sizeof(uint)`][std::mem::size_of].
     pub data_size: uint,
