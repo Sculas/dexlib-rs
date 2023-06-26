@@ -7,3 +7,6 @@
   - [ ] Use `rayon` feature in `dashmap`
 - [ ] Implement `dex` file writer
   - [ ] Fix `TryIntoCtx` traits to use `&mut Vec<u8>` instead of `&mut [u8]`
+- [ ] Add `smali!` macro
+  - [ ] Smali parsing via [`tree-sitter-smali`](https://crates.io/crates/tree-sitter-smali)
+  - [ ] VSCode extension for syntax highlighting using [Smalise](https://github.com/LoyieKing/Smalise)
