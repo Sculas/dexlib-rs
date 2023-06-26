@@ -104,7 +104,7 @@ impl<'a> Strings<'a> {
                 Ok::<_, StringReadError>((**element).cmp(data.data))
             })?
             .ok_or_else(|| StringReadError::StringNotFound)?;
-        self.id_at_idx(index as uint)
+        self.id_at_idx(index.try_into().expect("bad string idx?"))
     }
 }
 

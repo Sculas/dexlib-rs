@@ -69,7 +69,7 @@ impl TryIntoCtx<scroll::Endian> for CodeItem {
         try_gwrite_vec_with!(dst, offset, &self.insns, ctx);
         // 2 bytes of padding to make `tries` four-byte aligned.
         // This element is only present if `tries_size` is non-zero and `insns_size` is odd.
-        if self.insns.len() % 2 != 0 && self.tries.len() != 0 {
+        if self.insns.len() % 2 != 0 && !self.tries.is_empty() {
             dst.gwrite_with::<TriesPadding>(0, offset, ctx)?;
         }
         try_gwrite_vec_with!(dst, offset, self.tries, ctx);

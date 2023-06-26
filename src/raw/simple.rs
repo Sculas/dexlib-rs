@@ -63,9 +63,9 @@ pub struct TryItem {
     pub start_addr: uint,
     /// Number of 16-bit code units covered by this entry.
     /// The last code unit covered (inclusive) is `start_addr + insn_count - 1`.
-    pub insn_count: uint,
+    pub insn_count: ushort,
     /// Offset in bytes from the start of the associated `encoded_catch_hander_list`
     /// to the `encoded_catch_handler` for this entry.
     /// This must be an offset to the start of an `encoded_catch_handler`.
-    pub handler_off: uint,
+    pub handler_off: ushort,
 }

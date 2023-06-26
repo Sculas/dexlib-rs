@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use self::code::DexMethodImplementation;
+use self::implementation::DexMethodImplementation;
 
 use super::{
     annotations::Annotation,
@@ -23,7 +23,8 @@ use crate::{
 use once_cell::unsync::OnceCell;
 use scroll::Pread;
 
-pub mod code;
+pub mod exceptions;
+pub mod implementation;
 
 #[derive(derivative::Derivative)]
 #[derivative(Debug)]
@@ -89,7 +90,7 @@ impl<'a> traits::Method for DexMethod<'a> {
             let param = DexMethodParameter::new(
                 self.dex,
                 self.idx,
-                name.clone(),
+                *name,
                 ty.type_idx as u32,
                 self.annotations_dir.clone(),
             );
@@ -120,10 +121,8 @@ impl<'a> traits::Method for DexMethod<'a> {
             if ma.method_idx as usize != self.idx {
                 continue;
             }
-            let raw = self
-                .dex
-                .src
-                .pread_with(ma.annotations_off as usize, scroll::LE)?;
+            let offset = ma.annotations_off as usize;
+            let raw = self.dex.src.pread_with(offset, scroll::LE)?;
             annotations.push(Annotation::new(self.dex, raw));
         }
         Ok(annotations)
@@ -171,7 +170,10 @@ impl<'a> traits::MethodParameter for DexMethodParameter<'a> {
     fn name(&self) -> Result<Option<DexString>> {
         match self.name_idx {
             Some(idx) => {
-                let id = self.dex.strings().id_at_idx(idx as u32)?;
+                let id = self
+                    .dex
+                    .strings()
+                    .id_at_idx(idx.try_into().expect("bad name idx?"))?;
                 Ok(Some(self.dex.strings().get(&id)?))
             }
             _ => Ok(None),

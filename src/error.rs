@@ -32,6 +32,8 @@ pub enum Error {
     EncodedValue(#[from] EncodedValueError),
     #[error("error reading debug info: {0}")]
     DebugInfo(#[from] DebugInfoError),
+    #[error("invalid offset in exception handler: {0:#x}")]
+    InvalidExceptionHandler(u16),
     #[error("read error: {0}")]
     Scroll(#[from] scroll::Error),
 }

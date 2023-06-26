@@ -1,8 +1,6 @@
-use super::{annotations::Annotation, strings::DexString};
-use crate::{
-    raw::{code_item::DebugInfoItem, encoded_value::EncodedValue, flags::AccessFlags},
-    Result,
-};
+use super::{annotations::Annotation, methods::exceptions::TryCatchBlock, strings::DexString};
+use crate::raw::{code_item::DebugInfoItem, encoded_value::EncodedValue, flags::AccessFlags};
+use crate::Result;
 
 pub trait Class {
     fn descriptor(&self) -> Result<DexString>;
@@ -50,6 +48,6 @@ pub trait MethodParameter {
 pub trait MethodImplementation {
     fn registers(&self) -> u16;
     fn instructions(&self) -> Result<impl IntoIterator<Item = u16>>;
-    fn try_blocks(&self) -> Result<impl IntoIterator<Item = Annotation>>;
+    fn try_blocks(&self) -> Result<impl IntoIterator<Item = TryCatchBlock>>;
     fn debug_info(&self) -> Result<DebugInfoItem>; // TODO: use high level DebugInfo
 }

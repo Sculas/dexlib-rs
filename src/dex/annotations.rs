@@ -64,7 +64,10 @@ impl<'a> AnnotationElement<'a> {
     }
 
     pub fn name(&self) -> crate::Result<DexString> {
-        let id = self.dex.strings().id_at_idx(self.name_idx as u32)?;
+        let id = self
+            .dex
+            .strings()
+            .id_at_idx(self.name_idx.try_into().expect("bad name idx?"))?;
         Ok(self.dex.strings().get(&id)?)
     }
 
